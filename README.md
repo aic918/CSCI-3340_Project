@@ -1,3 +1,6 @@
+#Alexis Cano, Artemisa Trevino
+
+
 # Mentora 
 *A mentorship platform connecting learners and experts.*
 
