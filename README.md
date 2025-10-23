@@ -5,7 +5,7 @@
 *A mentorship platform connecting learners and experts.*
 
 ## Overview
-**Mentora** is a full-stack Django web application that connects people who want to **learn a skill** (mentees) with those who are **proficient in that skill** (mentors).  
+**Mentora** is a Django and Bootsrap based web application that connects people who want to **learn a skill** (mentees) with those who are **proficient in that skill** (mentors).  
 
 Mentors can create offerings describing their expertise, availability, and hourly rates.  
 Mentees can browse these offerings, book sessions, exchange messages, and leave reviews.  
