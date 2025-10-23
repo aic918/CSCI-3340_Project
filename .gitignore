@@ -1,1 +1,16 @@
 .DS_Store
+# Virtual environment
+venv/
+.env/
+
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Django stuff
+db.sqlite3
+staticfiles/
+media/
+
+# VS Code
+.vscode/
