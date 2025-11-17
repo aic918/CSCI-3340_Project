@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Mentors</h1>
+
+{% if mentors %}
+    {% for mentor in mentors %}
+        <div>
+            <h3>{{ mentor.user.username }}</h3>
+            <p>{{ mentor.bio }}</p>
+            <p>Skills: {{ mentor.skills }}</p>
+            {% if mentor.hourly_rate %}
+                <p>${{ mentor.hourly_rate }} / hour</p>
+            {% endif %}
+        </div>
+        <hr>
+    {% endfor %}
+{% else %}
+    <p>No mentors yet. Create some in the admin to test.</p>
+{% endif %}
+{% endblock %}

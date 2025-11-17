@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container text-center mt-5">
+    <h1 class="mb-4">Join Mentora</h1>
+    <p class="lead">Choose how you want to sign up</p>
+
+    <div class="d-flex justify-content-center gap-4 mt-4">
+        <a href="{% url 'signup' %}?role=MENTOR" class="btn btn-primary btn-lg">
+            Sign up as Mentor
+        </a>
+
+        <a href="{% url 'signup' %}?role=MENTEE" class="btn btn-success btn-lg">
+            Sign up as Mentee
+        </a>
+    </div>
+</div>
+{% endblock %}
