@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>{{ mentor.user.username }}</h1>
+
+    {% if mentor.bio %}
+        <p class="mt-2">{{ mentor.bio }}</p>
+    {% endif %}
+
+    {% if mentor.skills %}
+        <p><strong>Skills:</strong> {{ mentor.skills }}</p>
+    {% endif %}
+
+    {% if mentor.hourly_rate %}
+        <p><strong>Rate:</strong> ${{ mentor.hourly_rate }} / hour</p>
+    {% endif %}
+
+    {% if user.is_authenticated and user.profile.role == "MENTEE" %}
+        <a
+          href="{% url 'request_session' mentor.id %}"
+          class="btn btn-success mt-3"
+        >
+            Request a Session
+        </a>
+    {% endif %}
+
+    <a href="{% url 'mentor_list' %}" class="btn btn-link mt-3">
+        ← Back to mentors
+    </a>
+</div>
+{% endblock %}

@@ -1,21 +1,86 @@
 {% extends "base.html" %}
 
 {% block content %}
-<h1>Mentors</h1>
+<div class="container mt-4">
+    <h1 class="mb-3">Find a Mentor</h1>
+    <p class="text-muted">Search by name, skills, or bio.</p>
 
-{% if mentors %}
-    {% for mentor in mentors %}
-        <div>
-            <h3>{{ mentor.user.username }}</h3>
-            <p>{{ mentor.bio }}</p>
-            <p>Skills: {{ mentor.skills }}</p>
-            {% if mentor.hourly_rate %}
-                <p>${{ mentor.hourly_rate }} / hour</p>
-            {% endif %}
+    <!-- Search form -->
+    <form method="get" class="row g-2 mb-4">
+        <div class="col-sm-8 col-md-6">
+            <input
+                type="text"
+                name="q"
+                value="{{ query }}"
+                class="form-control"
+                placeholder="Search for 'Python', 'resume', 'AI', etc..."
+            >
         </div>
-        <hr>
-    {% endfor %}
-{% else %}
-    <p>No mentors yet. Create some in the admin to test.</p>
-{% endif %}
+        <div class="col-sm-4 col-md-2">
+            <button type="submit" class="btn btn-primary w-100">
+                Search
+            </button>
+        </div>
+    </form>
+
+    {% if mentors %}
+        <div class="row">
+            {% for mentor in mentors %}
+                <div class="col-md-4 mb-4">
+                    <div class="card h-100">
+                        <div class="card-body d-flex flex-column">
+                                <h5 class="card-title">
+                                    {{ mentor.user.username }}
+                                </h5>
+
+                                {% if mentor.bio %}
+                                    <p class="card-text small text-muted">
+                                        {{ mentor.bio|truncatewords:20 }}
+                                    </p>
+                                {% endif %}
+
+                                {% if mentor.skills %}
+                                    <p class="mb-1">
+                                        <strong>Skills:</strong>
+                                        {{ mentor.skills }}
+                                    </p>
+                                {% endif %}
+
+                                {% if mentor.hourly_rate %}
+                                    <p class="mb-2">
+                                        <strong>Rate:</strong>
+                                        ${{ mentor.hourly_rate }} / hour
+                                    </p>
+                                {% endif %}
+
+                                <div class="mt-auto">
+                                    <a
+                                    href="{% url 'mentor_detail' mentor.id %}"
+                                    class="btn btn-outline-primary btn-sm me-2"
+                                    >
+                                        View Profile
+                                    </a>
+
+                                    {% if user.is_authenticated and user.profile.role == "MENTEE" %}
+                                        <a
+                                        href="{% url 'request_session' mentor.id %}"
+                                        class="btn btn-success btn-sm"
+                                        >
+                                            Request Session
+                                        </a>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        {% if query %}
+            <p>No mentors found matching "<strong>{{ query }}</strong>".</p>
+        {% else %}
+            <p>No mentors available yet. Create some in the admin to test.</p>
+        {% endif %}
+    {% endif %}
+</div>
 {% endblock %}

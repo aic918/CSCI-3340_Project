@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>Request a Session with {{ mentor.user.username }}</h1>
+
+    <form method="post" class="mt-3">
+        {% csrf_token %}
+        <div class="mb-3">
+            <label for="id_topic" class="form-label">Topic</label>
+            {{ form.topic }}
+        </div>
+        <div class="mb-3">
+            <label for="id_scheduled_at" class="form-label">Preferred Date & Time</label>
+            {{ form.scheduled_at }}
+            <div class="form-text">
+                Use your local time. The mentor will confirm or reschedule.
+            </div>
+        </div>
+        <button type="submit" class="btn btn-success">Submit Request</button>
+        <a href="{% url 'mentor_detail' mentor.id %}" class="btn btn-link">
+            Cancel
+        </a>
+    </form>
+</div>
+{% endblock %}
