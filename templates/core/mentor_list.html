@@ -29,48 +29,59 @@
                 <div class="col-md-4 mb-4">
                     <div class="card h-100">
                         <div class="card-body d-flex flex-column">
-                                <h5 class="card-title">
-                                    {{ mentor.user.username }}
-                                </h5>
+                            <h5 class="card-title">
+                                {{ mentor.user.username }}
+                            </h5>
 
-                                {% if mentor.bio %}
-                                    <p class="card-text small text-muted">
-                                        {{ mentor.bio|truncatewords:20 }}
-                                    </p>
-                                {% endif %}
+                            {% if mentor.bio %}
+                                <p class="card-text small text-muted">
+                                    {{ mentor.bio|truncatewords:20 }}
+                                </p>
+                            {% endif %}
 
-                                {% if mentor.skills %}
-                                    <p class="mb-1">
-                                        <strong>Skills:</strong>
-                                        {{ mentor.skills }}
-                                    </p>
-                                {% endif %}
+                            {% if mentor.skills %}
+                                <p class="mb-1">
+                                    <strong>Skills:</strong>
+                                    {{ mentor.skills }}
+                                </p>
+                            {% endif %}
 
-                                {% if mentor.hourly_rate %}
-                                    <p class="mb-2">
-                                        <strong>Rate:</strong>
-                                        ${{ mentor.hourly_rate }} / hour
-                                    </p>
-                                {% endif %}
+                            {% if mentor.avg_rating %}
+                                <p class="mb-1">
+                                    ⭐ {{ mentor.avg_rating|floatformat:1 }} / 5
+                                </p>
+                            {% else %}
+                                <p class="mb-1 text-muted">
+                                    No reviews yet
+                                </p>
+                            {% endif %}
 
-                                <div class="mt-auto">
+                            {% if mentor.hourly_rate %}
+                                <p class="mb-2">
+                                    <strong>Rate:</strong>
+                                    ${{ mentor.hourly_rate }} / hour
+                                </p>
+                            {% endif %}
+
+                            <div class="mt-auto">
+                                <a
+                                href="{% url 'mentor_detail' mentor.id %}"
+                                class="btn btn-outline-primary btn-sm me-2"
+                                >
+                                    View Profile
+                                </a>
+
+                                {% if user.is_authenticated and user.profile.role == "MENTEE" %}
                                     <a
-                                    href="{% url 'mentor_detail' mentor.id %}"
-                                    class="btn btn-outline-primary btn-sm me-2"
+                                    href="{% url 'request_session' mentor.id %}"
+                                    class="btn btn-success btn-sm"
                                     >
-                                        View Profile
+                                        Request Session
                                     </a>
-
-                                    {% if user.is_authenticated and user.profile.role == "MENTEE" %}
-                                        <a
-                                        href="{% url 'request_session' mentor.id %}"
-                                        class="btn btn-success btn-sm"
-                                        >
-                                            Request Session
-                                        </a>
-                                    {% endif %}
-                                </div>
+                                {% endif %}
                             </div>
+                        </div>
+
                         </div>
                     </div>
             {% endfor %}

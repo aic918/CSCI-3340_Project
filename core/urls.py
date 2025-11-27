@@ -8,19 +8,21 @@ urlpatterns = [
     path("mentors/", views.mentor_list, name="mentor_list"),  # mentor list
     path("logout/", views.logout_view, name="logout_custom"),  # logut view
     path("dashboard/", views.dashboard, name="dashboard"),  # user dashboard
-     # NEW:
     path("mentors/<int:mentor_id>/", views.mentor_detail, name="mentor_detail"),
     path(
         "mentors/<int:mentor_id>/request-session/",
         views.request_session,
         name="request_session",
     ),
-    # NEW:
     path("my-sessions/", views.my_sessions, name="my_sessions"),
     path(
         "sessions/<int:session_id>/status/<str:new_status>/",
         views.update_session_status,
         name="update_session_status",
     ),
+    path("profile/edit/", views.edit_profile, name="edit_profile"),
+    path("sessions/<int:session_id>/review/", views.leave_review, name="leave_review"),
+
 ]
+    
 

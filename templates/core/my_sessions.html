@@ -19,35 +19,43 @@
             <tbody>
                 {% for s in sessions %}
                     <tr>
-    <td>{{ s.topic }}</td>
-    <td>{{ s.mentor.user.username }}</td>
-    <td>{{ s.mentee.user.username }}</td>
-    <td>{{ s.scheduled_at }}</td>
-    <td>
-        {{ s.get_status_display }}
+                        <td>{{ s.topic }}</td>
+                        <td>{{ s.mentor.user.username }}</td>
+                        <td>{{ s.mentee.user.username }}</td>
+                        <td>{{ s.scheduled_at }}</td>
+                        <td>
+                            {{ s.get_status_display }}
 
-        {% if user.profile.role == "MENTOR" and s.status == "PENDING" %}
-            <form method="post"
-                  action="{% url 'update_session_status' s.id 'CONFIRMED' %}"
-                  style="display:inline;">
-                {% csrf_token %}
-                <button type="submit" class="btn btn-sm btn-success ms-2">
-                    Accept
-                </button>
-            </form>
+                            {# Mentor: Accept / Decline for PENDING sessions #}
+                            {% if user.profile.role == "MENTOR" and s.status == "PENDING" %}
+                                <form method="post"
+                                      action="{% url 'update_session_status' s.id 'CONFIRMED' %}"
+                                      style="display:inline;">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-sm btn-success ms-2">
+                                        Accept
+                                    </button>
+                                </form>
 
-            <form method="post"
-                  action="{% url 'update_session_status' s.id 'CANCELLED' %}"
-                  style="display:inline;">
-                {% csrf_token %}
-                <button type="submit" class="btn btn-sm btn-outline-danger ms-1">
-                    Decline
-                </button>
-            </form>
-        {% endif %}
-    </td>
-</tr>
+                                <form method="post"
+                                      action="{% url 'update_session_status' s.id 'CANCELLED' %}"
+                                      style="display:inline;">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-sm btn-outline-danger ms-1">
+                                        Decline
+                                    </button>
+                                </form>
+                            {% endif %}
 
+                            {# Mentee: Leave review for COMPLETED sessions without review #}
+                            {% if user.profile.role == "MENTEE" and s.status == "COMPLETED" and not s.review %}
+                                <a href="{% url 'leave_review' s.id %}"
+                                   class="btn btn-sm btn-warning ms-2">
+                                    Leave review
+                                </a>
+                            {% endif %}
+                        </td>
+                    </tr>
                 {% endfor %}
             </tbody>
         </table>

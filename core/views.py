@@ -2,11 +2,11 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login
 from django.contrib.auth.forms import UserCreationForm
-from .models import Profile, Session
+from .models import Profile, Session, Review
 from django.contrib.auth import logout
 from django.contrib.auth.decorators import login_required
-from django.db.models import Q
-from .forms import SessionRequestForm
+from django.db.models import Q, Avg
+from .forms import SessionRequestForm, ProfileForm, ReviewForm
 
 
 
@@ -17,6 +17,7 @@ def logout_view(request):
     logout(request)        # clears the session
     return redirect("home")
 
+# Mentor list view
 # Mentor list view
 def mentor_list(request):
     query = request.GET.get("q", "").strip()
@@ -30,6 +31,11 @@ def mentor_list(request):
             Q(skills__icontains=query)
         )
 
+    # NEW: annotate average rating for each mentor
+    mentors = mentors.annotate(
+        avg_rating=Avg("sessions_as_mentor__review__rating")
+    )
+
     context = {
         "mentors": mentors,
         "query": query,
@@ -40,7 +46,17 @@ def mentor_list(request):
 @login_required
 def mentor_detail(request, mentor_id):
     mentor = get_object_or_404(Profile, id=mentor_id, role="MENTOR")
-    return render(request, "core/mentor_detail.html", {"mentor": mentor})
+    reviews = Review.objects.filter(session__mentor=mentor)
+    avg_rating = reviews.aggregate(avg=Avg("rating"))["avg"]
+    return render(
+        request,
+        "core/mentor_detail.html",
+        {
+            "mentor": mentor,
+            "avg_rating": avg_rating,
+            "reviews": reviews,
+        },
+    )    
 
 @login_required
 def request_session(request, mentor_id):
@@ -138,6 +154,32 @@ def my_sessions(request):
     return render(request, "core/my_sessions.html", context)
 
 @login_required
+def edit_profile(request):
+    # Make sure the user has a Profile
+    profile, created = Profile.objects.get_or_create(
+        user=request.user,
+        defaults={"role": "MENTEE"}  # default if they somehow had none
+    )
+
+    if request.method == "POST":
+        form = ProfileForm(request.POST, instance=profile)
+        if form.is_valid():
+            form.save()
+            return redirect("my_sessions")  # or 'mentor_list' / 'dashboard' if you prefer
+    else:
+        form = ProfileForm(instance=profile)
+
+    # We can show slightly different text depending on role
+    is_mentor = profile.role == "MENTOR"
+
+    return render(
+        request,
+        "core/edit_profile.html",
+        {"form": form, "is_mentor": is_mentor},
+    )
+
+
+@login_required
 def update_session_status(request, session_id, new_status):
     session = get_object_or_404(Session, id=session_id)
 
@@ -155,3 +197,37 @@ def update_session_status(request, session_id, new_status):
         session.save()
 
     return redirect("my_sessions")
+
+@login_required
+def leave_review(request, session_id):
+    # 1) Get the session or 404
+    session = get_object_or_404(Session, id=session_id)
+
+    # 2) Only the mentee can review this session
+    if request.user.profile != session.mentee:
+        return redirect("dashboard")
+
+    # 3) Only allow reviews for COMPLETED sessions
+    if session.status != "COMPLETED":
+        return redirect("dashboard")
+
+    # 4) One review per session (Review has OneToOneField to Session)
+    if hasattr(session, "review"):
+        return redirect("dashboard")
+
+    # 5) Handle form
+    if request.method == "POST":
+        form = ReviewForm(request.POST)
+        if form.is_valid():
+            review = form.save(commit=False)
+            review.session = session
+            review.save()
+            return redirect("my_sessions")
+    else:
+        form = ReviewForm()
+
+    return render(
+        request,
+        "core/leave_review.html",
+        {"session": session, "form": form},
+    )
