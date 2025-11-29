@@ -167,10 +167,17 @@ def my_sessions(request):
     profile = request.user.profile
 
     if profile.role == "MENTOR":
+        # Mentors can see all sessions (including cancelled) for history
         sessions = Session.objects.filter(mentor=profile).order_by("scheduled_at")
         role_label = "Sessions where you are the mentor"
-    else:  # MENTEE (or anything else)
-        sessions = Session.objects.filter(mentee=profile).order_by("scheduled_at")
+    else:  # MENTEE
+        # Mentees only see non-cancelled sessions
+        sessions = (
+            Session.objects
+            .filter(mentee=profile)
+            .exclude(status="CANCELLED")
+            .order_by("scheduled_at")
+        )
         role_label = "Sessions you requested"
 
     context = {
@@ -327,31 +334,45 @@ def conversation(request, profile_id):
 
 @login_required
 def cancel_session(request, session_id):
-    session = get_object_or_404(Session, id=session_id, mentee=request.user.profile)
+    """Mentee cancels their own session (pending or confirmed)."""
+    session = get_object_or_404(Session, id=session_id)
+    profile = request.user.profile
 
-    if session.status not in ["PENDING", "CONFIRMED"]:
+    # Only the mentee can cancel, and only if it's still upcoming
+    if profile != session.mentee or session.status not in ["PENDING", "CONFIRMED"]:
         return redirect("my_sessions")
 
     if request.method == "POST":
         session.status = "CANCELLED"
         session.save()
-        return redirect("my_sessions")
 
-    return render(request, "core/confirm_cancel.html", {"session": session})
+    return redirect("my_sessions")
+
 
 @login_required
 def reschedule_session(request, session_id):
-    session = get_object_or_404(Session, id=session_id, mentor=request.user.profile)
+    """Mentor reschedules a session."""
+    session = get_object_or_404(Session, id=session_id)
+    profile = request.user.profile
 
-    if session.status not in ["PENDING", "CONFIRMED"]:
+    # Only the mentor for this session can reschedule
+    if profile != session.mentor:
         return redirect("my_sessions")
 
     if request.method == "POST":
         form = RescheduleForm(request.POST, instance=session)
         if form.is_valid():
-            form.save()
+            updated = form.save(commit=False)
+            # When rescheduled, you can keep it CONFIRMED or move back to PENDING.
+            # Here we'll keep the current status:
+            # updated.status = "PENDING"
+            updated.save()
             return redirect("my_sessions")
     else:
         form = RescheduleForm(instance=session)
 
-    return render(request, "core/reschedule_session.html", {"session": session, "form": form})
+    return render(
+        request,
+        "core/reschedule_session.html",
+        {"form": form, "session": session},
+    )

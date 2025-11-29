@@ -27,6 +27,7 @@ urlpatterns = [
     path("messages/with/<int:profile_id>/", views.conversation, name="conversation"),
     path("sessions/<int:session_id>/cancel/", views.cancel_session, name="cancel_session"),
     path("sessions/<int:session_id>/reschedule/", views.reschedule_session, name="reschedule_session"),
+    path("mentors/<int:mentor_id>/request-session/", views.request_session, name="request_session"),
 
 ]
     

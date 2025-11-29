@@ -23,20 +23,19 @@
                         <td>{{ s.mentor.user.username }}</td>
                         <td>{{ s.mentee.user.username }}</td>
                         <td>{{ s.scheduled_at }}</td>
-
                         <td>
-                            {# --- STATUS BADGE --- #}
+                            {# Status badge #}
                             {% if s.status == "CONFIRMED" %}
                                 <span class="badge bg-success">Confirmed</span>
                             {% elif s.status == "CANCELLED" %}
-                                <span class="badge bg-danger">Declined</span>
+                                <span class="badge bg-danger">Cancelled</span>
                             {% elif s.status == "COMPLETED" %}
                                 <span class="badge bg-primary">Completed</span>
                             {% else %}
                                 <span class="badge bg-secondary">Pending</span>
                             {% endif %}
 
-                            {# --- MENTOR: ACCEPT / DECLINE WHEN PENDING --- #}
+                            {# Mentor: Accept / Decline when PENDING #}
                             {% if user.profile.role == "MENTOR" and s.status == "PENDING" %}
                                 <form method="post"
                                       action="{% url 'update_session_status' s.id 'CONFIRMED' %}"
@@ -55,36 +54,55 @@
                                         Decline
                                     </button>
                                 </form>
-                            {% endif %}
 
-                            {# --- MENTEE: MESSAGE WHEN PENDING --- #}
-                            {% if user.profile.role == "MENTEE" and s.status == "PENDING" %}
-                                <span class="text-muted ms-2">
-                                    (Awaiting mentor approval)
-                                </span>
-                            {% endif %}
-
-                            {# --- MENTEE: LEAVE REVIEW WHEN COMPLETED & NO REVIEW --- #}
-                            {% if user.profile.role == "MENTEE" and s.status == "COMPLETED" and not s.review %}
-                                <a href="{% url 'leave_review' s.id %}"
-                                   class="btn btn-sm btn-warning ms-2">
-                                    Leave review
-                                </a>
-                            {% endif %}
-
-                            {# --- MENTOR: RESCHEDULE WHEN PENDING --- #}
-                            {% if user.profile.role == "MENTOR" and s.status == "PENDING" %}
+                                {# Mentor can also reschedule pending sessions #}
                                 <a href="{% url 'reschedule_session' s.id %}"
                                    class="btn btn-sm btn-outline-secondary ms-2">
                                     Reschedule
                                 </a>
                             {% endif %}
 
-                            {# --- MENTOR: RESCHEDULE WHEN CONFIRMED --- #}
+                            {# Mentor: reschedule CONFIRMED sessions #}
                             {% if user.profile.role == "MENTOR" and s.status == "CONFIRMED" %}
                                 <a href="{% url 'reschedule_session' s.id %}"
                                    class="btn btn-sm btn-outline-secondary ms-2">
                                     Reschedule
+                                </a>
+                            {% endif %}
+
+                            {# Mentee: message when pending #}
+                            {% if user.profile.role == "MENTEE" and s.status == "PENDING" %}
+                                <span class="text-muted ms-2">(Awaiting mentor approval)</span>
+                            {% endif %}
+
+                            {# Mentee: Cancel when Pending or Confirmed #}
+                            {% if user.profile.role == "MENTEE" and s.status == "PENDING" %}
+                                <form method="post"
+                                      action="{% url 'cancel_session' s.id %}"
+                                      style="display:inline;">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-sm btn-outline-danger ms-2">
+                                        Cancel
+                                    </button>
+                                </form>
+                            {% endif %}
+
+                            {% if user.profile.role == "MENTEE" and s.status == "CONFIRMED" %}
+                                <form method="post"
+                                      action="{% url 'cancel_session' s.id %}"
+                                      style="display:inline;">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-sm btn-outline-danger ms-2">
+                                        Cancel
+                                    </button>
+                                </form>
+                            {% endif %}
+
+                            {# Mentee: Leave review for completed sessions without a review #}
+                            {% if user.profile.role == "MENTEE" and s.status == "COMPLETED" and not s.review %}
+                                <a href="{% url 'leave_review' s.id %}"
+                                   class="btn btn-sm btn-warning ms-2">
+                                    Leave review
                                 </a>
                             {% endif %}
                         </td>

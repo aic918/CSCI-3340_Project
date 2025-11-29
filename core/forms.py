@@ -1,5 +1,6 @@
 from django import forms
 from .models import Session, Profile, Review, Availability, Message
+from django.utils import timezone
 
 
 class SessionRequestForm(forms.ModelForm):
@@ -18,6 +19,11 @@ class SessionRequestForm(forms.ModelForm):
                 }
             ),
         }
+        def clean_scheduled_at(self):
+            dt = self.cleaned_data["scheduled_at"]
+            if dt and dt < timezone.now():
+                raise forms.ValidationError("Please choose a date and time in the future.")
+            return dt
 
 
 class ProfileForm(forms.ModelForm):
@@ -93,3 +99,8 @@ class RescheduleForm(forms.ModelForm):
                 attrs={"class": "form-control", "type": "datetime-local"}
             )
         }
+    def clean_scheduled_at(self):
+        dt = self.cleaned_data["scheduled_at"]
+        if dt and dt < timezone.now():
+            raise forms.ValidationError("Please choose a date and time in the future.")
+        return dt
