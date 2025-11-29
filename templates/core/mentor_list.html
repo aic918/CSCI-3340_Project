@@ -32,6 +32,11 @@
                             <h5 class="card-title">
                                 {{ mentor.user.username }}
                             </h5>
+                            
+                            {% if mentor.photo %}
+                                <img src="{{ mentor.photo.url }}" class="card-img-top" alt="{{ mentor.user.username }}'s photo">
+                            {% endif %}
+
 
                             {% if mentor.bio %}
                                 <p class="card-text small text-muted">

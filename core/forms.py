@@ -1,5 +1,5 @@
 from django import forms
-from .models import Session, Profile, Review
+from .models import Session, Profile, Review, Availability, Message
 
 
 class SessionRequestForm(forms.ModelForm):
@@ -40,6 +40,7 @@ class ProfileForm(forms.ModelForm):
                 "step": "0.01",
                 "min": "0",
             }),
+            "photo": forms.ClearableFileInput(attrs={"class": "form-control"}),
         }
 
 
@@ -59,4 +60,36 @@ class ReviewForm(forms.ModelForm):
                 "rows": 4,
                 "placeholder": "Write your feedback about this session...",
             }),
+        }
+
+class AvailabilityForm(forms.ModelForm):
+    class Meta:
+        model = Availability
+        fields = ["day_of_week", "start_time", "end_time"]
+        widgets = {
+            "day_of_week": forms.Select(attrs={"class": "form-select"}),
+            "start_time": forms.TimeInput(attrs={"class": "form-control", "type": "time"}),
+            "end_time": forms.TimeInput(attrs={"class": "form-control", "type": "time"}),
+        }
+
+class MessageForm(forms.ModelForm):
+    class Meta:
+        model = Message
+        fields = ["content"]
+        widgets = {
+            "content": forms.Textarea(attrs={
+                "class": "form-control",
+                "rows": 3,
+                "placeholder": "Write a message..."
+            }),
+        }
+
+class RescheduleForm(forms.ModelForm):
+    class Meta:
+        model = Session
+        fields = ["scheduled_at"]
+        widgets = {
+            "scheduled_at": forms.DateTimeInput(
+                attrs={"class": "form-control", "type": "datetime-local"}
+            )
         }

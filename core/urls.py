@@ -22,6 +22,11 @@ urlpatterns = [
     ),
     path("profile/edit/", views.edit_profile, name="edit_profile"),
     path("sessions/<int:session_id>/review/", views.leave_review, name="leave_review"),
+    path("availability/", views.edit_availability, name="edit_availability"),
+    path("inbox/", views.inbox, name="inbox"),
+    path("messages/with/<int:profile_id>/", views.conversation, name="conversation"),
+    path("sessions/<int:session_id>/cancel/", views.cancel_session, name="cancel_session"),
+    path("sessions/<int:session_id>/reschedule/", views.reschedule_session, name="reschedule_session"),
 
 ]
     

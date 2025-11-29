@@ -16,6 +16,12 @@
                 <a href="{% url 'dashboard' %}" class="me-3">Home</a>
                 <a href="{% url 'my_sessions' %}" class="me-3">My Sessions</a>
                 <a href="{% url 'edit_profile' %}" class="me-3">Profile</a>
+                <a href="{% url 'inbox' %}" class="me-3">Messages</a>
+
+                {% if user.profile.role == "MENTOR" %}
+                    <a href="{% url 'edit_availability' %}" class="me-3">My Availability</a>
+                {% endif %}
+
                 <span class="me-3">Logged in as {{ user.username }}</span>
                 <a href="{% url 'logout_custom' %}">Logout</a>
             {% else %}
@@ -24,6 +30,7 @@
                 <a href="{% url 'select_role' %}">Sign up</a>
             {% endif %}
         </nav>
+
     </header>
 
     <hr>

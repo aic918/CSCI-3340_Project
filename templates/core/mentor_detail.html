@@ -4,6 +4,11 @@
 <div class="container mt-4">
     <h1>{{ mentor.user.username }}</h1>
 
+    {% if mentor.photo %}
+    <img src="{{ mentor.photo.url }}" class="img-thumbnail mb-3" style="max-width: 200px;" alt="{{ mentor.user.username }}'s photo">
+    {% endif %}
+
+
     {# Average rating #}
     {% if avg_rating %}
         <p class="mt-2">
@@ -30,6 +35,22 @@
           href="{% url 'request_session' mentor.id %}"
           class="btn btn-success mt-3"
         >
+            
+                {# Availability section #}
+        {% if mentor.availability_set.all %}
+            <h4 class="mt-4">Availability</h4>
+            <ul class="list-group">
+                {% for a in mentor.availability_set.all %}
+                    <li class="list-group-item">
+                        {{ a.get_day_of_week_display }} —
+                        {{ a.start_time }} to {{ a.end_time }}
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p class="text-muted mt-3">This mentor has not set availability yet.</p>
+        {% endif %}
+
             Request a Session
         </a>
     {% endif %}

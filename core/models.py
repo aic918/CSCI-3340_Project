@@ -30,6 +30,12 @@ class Profile(models.Model):
         blank=True,
         help_text="Only for mentors",
     )
+     # Optional: if you already added this earlier for profile pictures
+    photo = models.ImageField(
+        upload_to="profiles/",
+        blank=True,
+        null=True,
+    )
 
     def __str__(self):
         return f"{self.user.username} ({self.get_role_display()})"
@@ -107,3 +113,26 @@ def create_profile_for_new_user(sender, instance, created, **kwargs):
     if created:
         Profile.objects.create(user=instance, role="MENTEE")
 #-------------------------ENDS HERE-------------------------------------------
+class Availability(models.Model):
+    DAY_CHOICES = [
+        (0, "Monday"),
+        (1, "Tuesday"),
+        (2, "Wednesday"),
+        (3, "Thursday"),
+        (4, "Friday"),
+        (5, "Saturday"),
+        (6, "Sunday"),
+    ]
+
+    mentor = models.ForeignKey(
+        Profile,
+        on_delete=models.CASCADE,
+        related_name="availabilities",
+    )
+    day_of_week = models.IntegerField(choices=DAY_CHOICES)
+    start_time = models.TimeField()
+    end_time = models.TimeField()
+
+    def __str__(self):
+        return f"{self.mentor.user.username} - {self.get_day_of_week_display()} {self.start_time}-{self.end_time}"
+

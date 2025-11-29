@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4" style="max-width: 700px;">
+    <h1>Conversation with {{ other.user.username }}</h1>
+
+    <div class="border rounded p-3 mb-3" style="max-height: 400px; overflow-y: auto;">
+        {% for m in messages %}
+            <div class="mb-2">
+                <strong>
+                    {% if m.sender == user.profile %}
+                        You
+                    {% else %}
+                        {{ m.sender.user.username }}
+                    {% endif %}
+                </strong>
+                <small class="text-muted"> · {{ m.sent_at }}</small>
+                <p class="mb-1">{{ m.content }}</p>
+            </div>
+        {% empty %}
+            <p class="text-muted">No messages yet. Start the conversation below.</p>
+        {% endfor %}
+    </div>
+
+    <form method="post">
+        {% csrf_token %}
+        {{ form.content }}
+        <button type="submit" class="btn btn-primary mt-2">Send</button>
+    </form>
+</div>
+{% endblock %}

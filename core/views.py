@@ -2,11 +2,11 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login
 from django.contrib.auth.forms import UserCreationForm
-from .models import Profile, Session, Review
+from .models import Profile, Session, Review, Availability, Message
 from django.contrib.auth import logout
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q, Avg
-from .forms import SessionRequestForm, ProfileForm, ReviewForm
+from .forms import SessionRequestForm, ProfileForm, ReviewForm, AvailabilityForm, MessageForm, RescheduleForm
 
 
 
@@ -122,19 +122,45 @@ def signup(request):
 def dashboard(request):
     user = request.user
 
-    # Make sure the user always has a Profile
     profile, created = Profile.objects.get_or_create(
         user=user,
-        defaults={"role": "MENTEE"}  # default role if they had none
+        defaults={"role": "MENTEE"}
     )
 
-    # If profile was just created, or role is weird, send them to role selection
     if created or profile.role not in ["MENTOR", "MENTEE"]:
         return redirect("select_role")
 
-    # For now both roles just go to mentor list,
-    # but you can later split into different dashboards
-    return redirect("mentor_list")
+    if profile.role == "MENTOR":
+        sessions = Session.objects.filter(mentor=profile)
+        total_sessions = sessions.count()
+        completed = sessions.filter(status="COMPLETED").count()
+        pending = sessions.filter(status="PENDING").count()
+        avg_rating = Review.objects.filter(session__mentor=profile).aggregate(Avg("rating"))["rating__avg"]
+
+        context = {
+            "profile": profile,
+            "is_mentor": True,
+            "total_sessions": total_sessions,
+            "completed": completed,
+            "pending": pending,
+            "avg_rating": avg_rating,
+        }
+    else:
+        sessions = Session.objects.filter(mentee=profile)
+        total_sessions = sessions.count()
+        completed = sessions.filter(status="COMPLETED").count()
+        pending = sessions.filter(status="PENDING").count()
+
+        context = {
+            "profile": profile,
+            "is_mentor": False,
+            "total_sessions": total_sessions,
+            "completed": completed,
+            "pending": pending,
+        }
+
+    return render(request, "core/dashboard.html", context)
+
 
 @login_required
 def my_sessions(request):
@@ -162,7 +188,7 @@ def edit_profile(request):
     )
 
     if request.method == "POST":
-        form = ProfileForm(request.POST, instance=profile)
+        form = ProfileForm(request.POST, request.FILES, instance=profile)
         if form.is_valid():
             form.save()
             return redirect("my_sessions")  # or 'mentor_list' / 'dashboard' if you prefer
@@ -231,3 +257,101 @@ def leave_review(request, session_id):
         "core/leave_review.html",
         {"session": session, "form": form},
     )
+
+@login_required
+def edit_availability(request):
+    profile = request.user.profile
+    if profile.role != "MENTOR":
+        return redirect("dashboard")
+
+    if request.method == "POST":
+        form = AvailabilityForm(request.POST)
+        if form.is_valid():
+            availability = form.save(commit=False)
+            availability.mentor = profile
+            availability.save()
+            return redirect("edit_availability")
+    else:
+        form = AvailabilityForm()
+
+    availabilities = profile.availabilities.all().order_by("day_of_week", "start_time")
+
+    return render(
+        request,
+        "core/edit_availability.html",
+        {"form": form, "availabilities": availabilities},
+    )
+
+@login_required
+def inbox(request):
+    profile = request.user.profile
+
+    # All messages involving this profile
+    msgs = Message.objects.filter(
+        Q(sender=profile) | Q(recipient=profile)
+    ).select_related("sender", "recipient").order_by("-sent_at")
+
+    # Very simple: just show a flat list for now
+    return render(request, "core/inbox.html", {"messages": msgs})
+
+
+@login_required
+def conversation(request, profile_id):
+    profile = request.user.profile
+    other = get_object_or_404(Profile, id=profile_id)
+
+    messages = Message.objects.filter(
+        Q(sender=profile, recipient=other) |
+        Q(sender=other, recipient=profile)
+    ).order_by("sent_at")
+
+    # Mark messages from 'other' as read
+    Message.objects.filter(sender=other, recipient=profile, is_read=False).update(is_read=True)
+
+    if request.method == "POST":
+        form = MessageForm(request.POST)
+        if form.is_valid():
+            msg = form.save(commit=False)
+            msg.sender = profile
+            msg.recipient = other
+            msg.save()
+            return redirect("conversation", profile_id=other.id)
+    else:
+        form = MessageForm()
+
+    return render(
+        request,
+        "core/conversation.html",
+        {"other": other, "messages": messages, "form": form},
+    )
+
+@login_required
+def cancel_session(request, session_id):
+    session = get_object_or_404(Session, id=session_id, mentee=request.user.profile)
+
+    if session.status not in ["PENDING", "CONFIRMED"]:
+        return redirect("my_sessions")
+
+    if request.method == "POST":
+        session.status = "CANCELLED"
+        session.save()
+        return redirect("my_sessions")
+
+    return render(request, "core/confirm_cancel.html", {"session": session})
+
+@login_required
+def reschedule_session(request, session_id):
+    session = get_object_or_404(Session, id=session_id, mentor=request.user.profile)
+
+    if session.status not in ["PENDING", "CONFIRMED"]:
+        return redirect("my_sessions")
+
+    if request.method == "POST":
+        form = RescheduleForm(request.POST, instance=session)
+        if form.is_valid():
+            form.save()
+            return redirect("my_sessions")
+    else:
+        form = RescheduleForm(instance=session)
+
+    return render(request, "core/reschedule_session.html", {"session": session, "form": form})

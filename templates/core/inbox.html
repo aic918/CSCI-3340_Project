@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>Inbox</h1>
+
+    {% if messages %}
+        <ul class="list-group mt-3">
+            {% for m in messages %}
+                <li class="list-group-item">
+                    <strong>
+                        {% if m.sender == user.profile %}
+                            To {{ m.recipient.user.username }}
+                        {% else %}
+                            From {{ m.sender.user.username }}
+                        {% endif %}
+                    </strong>
+                    <br>
+                    <small class="text-muted">{{ m.sent_at }}</small>
+                    <p class="mb-0 mt-1">{{ m.content }}</p>
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p class="mt-3 text-muted">No messages yet.</p>
+    {% endif %}
+</div>
+{% endblock %}

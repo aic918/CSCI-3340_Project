@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4" style="max-width: 700px;">
+    <h1>My Availability</h1>
+    <p class="text-muted">
+        Add the times when you are available for mentoring.
+    </p>
+
+    <form method="post" class="row g-2 mb-4">
+        {% csrf_token %}
+        <div class="col-md-4">
+            {{ form.day_of_week }}
+        </div>
+        <div class="col-md-3">
+            {{ form.start_time }}
+        </div>
+        <div class="col-md-3">
+            {{ form.end_time }}
+        </div>
+        <div class="col-md-2">
+            <button type="submit" class="btn btn-primary w-100">Add</button>
+        </div>
+    </form>
+
+    <h2 class="h5">Existing Availability</h2>
+    {% if availabilities %}
+        <ul class="list-group mt-2">
+            {% for a in availabilities %}
+                <li class="list-group-item">
+                    {{ a.get_day_of_week_display }}:
+                    {{ a.start_time }} – {{ a.end_time }}
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p class="mt-2 text-muted">You have not set any availability yet.</p>
+    {% endif %}
+</div>
+{% endblock %}

@@ -13,7 +13,7 @@
                     <th>Mentor</th>
                     <th>Mentee</th>
                     <th>Scheduled At</th>
-                    <th>Status</th>
+                    <th>Status / Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -23,10 +23,20 @@
                         <td>{{ s.mentor.user.username }}</td>
                         <td>{{ s.mentee.user.username }}</td>
                         <td>{{ s.scheduled_at }}</td>
-                        <td>
-                            {{ s.get_status_display }}
 
-                            {# Mentor: Accept / Decline for PENDING sessions #}
+                        <td>
+                            {# --- STATUS BADGE --- #}
+                            {% if s.status == "CONFIRMED" %}
+                                <span class="badge bg-success">Confirmed</span>
+                            {% elif s.status == "CANCELLED" %}
+                                <span class="badge bg-danger">Declined</span>
+                            {% elif s.status == "COMPLETED" %}
+                                <span class="badge bg-primary">Completed</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Pending</span>
+                            {% endif %}
+
+                            {# --- MENTOR: ACCEPT / DECLINE WHEN PENDING --- #}
                             {% if user.profile.role == "MENTOR" and s.status == "PENDING" %}
                                 <form method="post"
                                       action="{% url 'update_session_status' s.id 'CONFIRMED' %}"
@@ -47,11 +57,34 @@
                                 </form>
                             {% endif %}
 
-                            {# Mentee: Leave review for COMPLETED sessions without review #}
+                            {# --- MENTEE: MESSAGE WHEN PENDING --- #}
+                            {% if user.profile.role == "MENTEE" and s.status == "PENDING" %}
+                                <span class="text-muted ms-2">
+                                    (Awaiting mentor approval)
+                                </span>
+                            {% endif %}
+
+                            {# --- MENTEE: LEAVE REVIEW WHEN COMPLETED & NO REVIEW --- #}
                             {% if user.profile.role == "MENTEE" and s.status == "COMPLETED" and not s.review %}
                                 <a href="{% url 'leave_review' s.id %}"
                                    class="btn btn-sm btn-warning ms-2">
                                     Leave review
+                                </a>
+                            {% endif %}
+
+                            {# --- MENTOR: RESCHEDULE WHEN PENDING --- #}
+                            {% if user.profile.role == "MENTOR" and s.status == "PENDING" %}
+                                <a href="{% url 'reschedule_session' s.id %}"
+                                   class="btn btn-sm btn-outline-secondary ms-2">
+                                    Reschedule
+                                </a>
+                            {% endif %}
+
+                            {# --- MENTOR: RESCHEDULE WHEN CONFIRMED --- #}
+                            {% if user.profile.role == "MENTOR" and s.status == "CONFIRMED" %}
+                                <a href="{% url 'reschedule_session' s.id %}"
+                                   class="btn btn-sm btn-outline-secondary ms-2">
+                                    Reschedule
                                 </a>
                             {% endif %}
                         </td>
