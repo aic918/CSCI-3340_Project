@@ -11,27 +11,24 @@
 </head>
 <body>
     <header>
-        <nav class="p-3 border-bottom">
-            {% if user.is_authenticated %}
-                <a href="{% url 'dashboard' %}" class="me-3">Home</a>
-                <a href="{% url 'my_sessions' %}" class="me-3">My Sessions</a>
-                <a href="{% url 'edit_profile' %}" class="me-3">Profile</a>
-                <a href="{% url 'inbox' %}" class="me-3">Messages</a>
+  <nav class="p-3 border-bottom d-flex align-items-center">
+    {% if user.is_authenticated %}
+      <a href="{% url 'dashboard' %}" class="me-3">Home</a>
+      <a href="{% url 'feed' %}" class="me-3">Feed</a>
+      <a href="{% url 'my_sessions' %}" class="me-3">My Sessions</a>
+      <a href="{% url 'profile' %}" class="me-3">Profile</a>
+      <a href="{% url 'inbox' %}" class="me-3">Messages</a>
 
-                {% if user.profile.role == "MENTOR" %}
-                    <a href="{% url 'edit_availability' %}" class="me-3">My Availability</a>
-                {% endif %}
+      <span class="ms-auto me-3">Logged in as {{ user.username }}</span>
+      <a href="{% url 'logout_custom' %}">Logout</a>
+    {% else %}
+      <a href="{% url 'home' %}" class="me-3">Home</a>
+      <a href="{% url 'login' %}" class="me-3">Login</a>
+      <a href="{% url 'select_role' %}">Sign up</a>
+    {% endif %}
+  </nav>
+</header>
 
-                <span class="me-3">Logged in as {{ user.username }}</span>
-                <a href="{% url 'logout_custom' %}">Logout</a>
-            {% else %}
-                <a href="{% url 'home' %}" class="me-3">Home</a>
-                <a href="{% url 'login' %}" class="me-3">Login</a>
-                <a href="{% url 'select_role' %}">Sign up</a>
-            {% endif %}
-        </nav>
-
-    </header>
 
     <hr>
 

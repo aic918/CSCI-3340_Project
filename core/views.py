@@ -2,12 +2,21 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login
 from django.contrib.auth.forms import UserCreationForm
-from .models import Profile, Session, Review, Availability, Message
+from .models import Profile, Session, Review, Availability, Message, Connection, Post
 from django.contrib.auth import logout
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q, Avg
 from .forms import SessionRequestForm, ProfileForm, ReviewForm, AvailabilityForm, MessageForm, RescheduleForm
+from django import forms
 
+def _connection_between(p1, p2):
+    """
+    Return existing Connection object (any direction), or None.
+    """
+    return Connection.objects.filter(
+        Q(from_profile=p1, to_profile=p2) |
+        Q(from_profile=p2, to_profile=p1)
+    ).first()
 
 
 def home(request):
@@ -48,6 +57,11 @@ def mentor_detail(request, mentor_id):
     mentor = get_object_or_404(Profile, id=mentor_id, role="MENTOR")
     reviews = Review.objects.filter(session__mentor=mentor)
     avg_rating = reviews.aggregate(avg=Avg("rating"))["avg"]
+
+    # NEW: figure out connection status between current user and this mentor
+    current_profile = request.user.profile
+    connection = _connection_between(current_profile, mentor)
+
     return render(
         request,
         "core/mentor_detail.html",
@@ -55,8 +69,10 @@ def mentor_detail(request, mentor_id):
             "mentor": mentor,
             "avg_rating": avg_rating,
             "reviews": reviews,
+            "connection": connection,
         },
-    )    
+    )
+    
 
 @login_required
 def request_session(request, mentor_id):
@@ -187,6 +203,61 @@ def my_sessions(request):
     return render(request, "core/my_sessions.html", context)
 
 @login_required
+def profile_view(request):
+    """
+    Show a LinkedIn-style profile page for the currently logged-in user,
+    including availability (for mentors), stats, and posts.
+    """
+    profile = request.user.profile
+    is_mentor = (profile.role == "MENTOR")
+
+    # --- Stats (optional, but nice) ---
+    if is_mentor:
+        sessions_as_mentor = Session.objects.filter(mentor=profile)
+        total_sessions = sessions_as_mentor.count()
+        completed = sessions_as_mentor.filter(status="COMPLETED").count()
+        pending = sessions_as_mentor.filter(status="PENDING").count()
+        avg_rating = (
+            Review.objects
+            .filter(session__mentor=profile)
+            .aggregate(Avg("rating"))["rating__avg"]
+        )
+    else:
+        sessions_as_mentee = Session.objects.filter(mentee=profile)
+        total_sessions = sessions_as_mentee.count()
+        completed = sessions_as_mentee.filter(status="COMPLETED").count()
+        pending = sessions_as_mentee.filter(status="PENDING").count()
+        avg_rating = None  # mentees don’t have ratings
+
+    # --- Availability (read-only on profile) ---
+    availabilities = (
+        profile.availabilities.all()
+        .order_by("day_of_week", "start_time")
+    )
+
+    # --- Posts authored by this profile ---
+    posts = (
+        Post.objects.filter(author=profile)
+        .select_related("author", "author__user")
+        .order_by("-created_at")
+    )
+
+    context = {
+        "profile": profile,              # <-- key name used in profile.html
+        "is_mentor": is_mentor,
+        "total_sessions": total_sessions,
+        "completed": completed,
+        "pending": pending,
+        "avg_rating": avg_rating,
+        "availabilities": availabilities,
+        "posts": posts,
+    }
+    return render(request, "core/profile.html", context)
+
+
+
+
+@login_required
 def edit_profile(request):
     # Make sure the user has a Profile
     profile, created = Profile.objects.get_or_create(
@@ -198,7 +269,7 @@ def edit_profile(request):
         form = ProfileForm(request.POST, request.FILES, instance=profile)
         if form.is_valid():
             form.save()
-            return redirect("my_sessions")  # or 'mentor_list' / 'dashboard' if you prefer
+            return redirect("profile")  # or 'mentor_list' / 'dashboard' if you prefer
     else:
         form = ProfileForm(instance=profile)
 
@@ -277,7 +348,7 @@ def edit_availability(request):
             availability = form.save(commit=False)
             availability.mentor = profile
             availability.save()
-            return redirect("edit_availability")
+            return redirect("profile")
     else:
         form = AvailabilityForm()
 
@@ -376,3 +447,104 @@ def reschedule_session(request, session_id):
         "core/reschedule_session.html",
         {"form": form, "session": session},
     )
+
+@login_required
+def feed(request):
+    """
+    Show a simple global feed of mentor posts.
+    Later we can filter to connections only.
+    """
+    posts = Post.objects.select_related("author", "author__user")
+
+    return render(
+        request,
+        "core/feed.html",
+        {
+            "posts": posts,
+        },
+    )
+class PostForm(forms.ModelForm):
+    class Meta:
+        model = Post
+        fields = ["content"]
+        widgets = {
+            "content": forms.Textarea(
+                attrs={
+                    "class": "form-control",
+                    "rows": 3,
+                    "placeholder": "Share an update, tip, or opportunity..."
+                }
+            )
+        }
+
+
+@login_required
+def create_post(request):
+    profile = request.user.profile
+
+    # Only mentors can create posts
+    if profile.role != "MENTOR":
+        return redirect("feed")
+
+    if request.method == "POST":
+        form = PostForm(request.POST)
+        if form.is_valid():
+            post = form.save(commit=False)
+            post.author = profile
+            post.save()
+            return redirect("feed")
+    else:
+        form = PostForm()
+
+    return render(request, "core/create_post.html", {"form": form})
+
+@login_required
+def send_connection_request(request, mentor_id):
+    """
+    Mentee clicks 'Connect' on a mentor's profile.
+    Creates a Connection in PENDING status if it doesn't exist yet.
+    """
+    mentee_profile = request.user.profile
+    mentor_profile = get_object_or_404(Profile, id=mentor_id, role="MENTOR")
+
+    # Only mentees can send connection requests
+    if mentee_profile.role != "MENTEE":
+        return redirect("mentor_detail", mentor_id=mentor_id)
+
+    # Don't allow connecting to yourself
+    if mentee_profile == mentor_profile:
+        return redirect("mentor_detail", mentor_id=mentor_id)
+
+    existing = _connection_between(mentee_profile, mentor_profile)
+    if not existing:
+        Connection.objects.create(
+            from_profile=mentee_profile,
+            to_profile=mentor_profile,
+            status="PENDING",
+        )
+
+    # If there was already a connection, we just go back to mentor detail
+    return redirect("mentor_detail", mentor_id=mentor_id)
+
+
+@login_required
+def respond_connection_request(request, connection_id, action):
+    """
+    Mentor clicks Accept / Decline on an incoming connection request.
+    action is 'accept' or 'decline'.
+    """
+    connection = get_object_or_404(Connection, id=connection_id)
+
+    # Only the 'to_profile' (mentor) can respond
+    if request.user.profile != connection.to_profile:
+        return redirect("dashboard")
+
+    if request.method == "POST":
+        if action == "accept":
+            connection.status = "ACCEPTED"
+        elif action == "decline":
+            connection.status = "DECLINED"
+        connection.save()
+
+    return redirect("dashboard")
+

@@ -136,3 +136,60 @@ class Availability(models.Model):
     def __str__(self):
         return f"{self.mentor.user.username} - {self.get_day_of_week_display()} {self.start_time}-{self.end_time}"
 
+
+class Connection(models.Model):
+    """
+    A Linkedin-style connection between two profiles.
+    For your project:
+      - Usually mentee -> mentor
+      - Has a status: pending / accepted / declined
+    """
+    STATUS_CHOICES = [
+        ("PENDING", "Pending"),
+        ("ACCEPTED", "Accepted"),
+        ("DECLINED", "Declined"),
+    ]
+
+    from_profile = models.ForeignKey(
+        "Profile",
+        related_name="connections_sent",
+        on_delete=models.CASCADE,
+    )
+    to_profile = models.ForeignKey(
+        "Profile",
+        related_name="connections_received",
+        on_delete=models.CASCADE,
+    )
+    status = models.CharField(
+        max_length=10,
+        choices=STATUS_CHOICES,
+        default="PENDING",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("from_profile", "to_profile")
+
+    def __str__(self):
+        return f"{self.from_profile} → {self.to_profile} ({self.status})"
+
+
+class Post(models.Model):
+    """
+    Short updates that mentors can post; shown in a shared feed.
+    """
+    author = models.ForeignKey(
+        "Profile",
+        related_name="posts",
+        on_delete=models.CASCADE,
+    )
+    content = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    # Optional: later you can add images, tags, etc.
+
+    class Meta:
+        ordering = ["-created_at"]  # newest first
+
+    def __str__(self):
+        return f"Post by {self.author} at {self.created_at}"

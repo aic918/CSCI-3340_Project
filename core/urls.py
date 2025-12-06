@@ -28,6 +28,24 @@ urlpatterns = [
     path("sessions/<int:session_id>/cancel/", views.cancel_session, name="cancel_session"),
     path("sessions/<int:session_id>/reschedule/", views.reschedule_session, name="reschedule_session"),
     path("mentors/<int:mentor_id>/request-session/", views.request_session, name="request_session"),
+    # Feed + posts
+    path("feed/", views.feed, name="feed"),
+    path("posts/new/", views.create_post, name="create_post"),
+
+    # Connections
+    path(
+        "mentors/<int:mentor_id>/connect/",
+        views.send_connection_request,
+        name="send_connection_request",
+    ),
+    path(
+        "connections/<int:connection_id>/<str:action>/",
+        views.respond_connection_request,
+        name="respond_connection_request",
+    ),
+    path("profile/", views.profile_view, name="profile"),
+    path("profile/edit/", views.edit_profile, name="edit_profile"),
+    
 
 ]
     

@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+  <div class="row">
+    <!-- LEFT COLUMN: PHOTO + BASIC INFO -->
+    <div class="col-md-4">
+      <div class="card mb-3">
+        <div class="card-body text-center">
+          {% if profile.photo %}
+            <img src="{{ profile.photo.url }}" class="rounded-circle mb-3" style="width: 120px; height: 120px; object-fit: cover;" alt="Profile picture">
+          {% else %}
+            <div class="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center mb-3"
+                 style="width: 120px; height: 120px; font-size: 48px;">
+              {{ profile.user.username|slice:":1"|upper }}
+            </div>
+          {% endif %}
+
+          <h3 class="h4 mb-1">{{ profile.user.username }}</h3>
+          <p class="text-muted mb-1">
+            {% if profile.role == "MENTOR" %}
+              Mentor
+            {% else %}
+              Mentee
+            {% endif %}
+          </p>
+
+          {% if profile.hourly_rate and profile.role == "MENTOR" %}
+            <p class="mb-2"><strong>${{ profile.hourly_rate }}</strong> / hour</p>
+          {% endif %}
+
+          <a href="{% url 'edit_profile' %}" class="btn btn-outline-primary btn-sm mt-2">
+            Edit profile
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT COLUMN: ABOUT + AVAILABILITY + POSTS -->
+    <div class="col-md-8">
+
+      <!-- About / Bio -->
+      <div class="card mb-3">
+        <div class="card-body">
+          <h5 class="card-title">About</h5>
+
+          {% if profile.bio %}
+            <p class="mb-1">{{ profile.bio }}</p>
+          {% else %}
+            <p class="text-muted mb-1">No bio yet.</p>
+          {% endif %}
+
+          {% if profile.skills %}
+            <p class="mt-2 mb-0">
+              <strong>Skills / interests:</strong>
+              {{ profile.skills }}
+            </p>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Availability (read-only) -->
+      <div class="card mb-3">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <h5 class="card-title mb-0">Availability</h5>
+
+            {% if profile.role == "MENTOR" %}
+              <a href="{% url 'edit_availability' %}" class="btn btn-sm btn-outline-primary">
+                Edit availability
+              </a>
+            {% endif %}
+          </div>
+
+          {% if profile.role == "MENTOR" %}
+            {% if availabilities %}
+              <table class="table table-sm mb-0">
+                <thead>
+                  <tr>
+                    <th>Day</th>
+                    <th>Start</th>
+                    <th>End</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for slot in availabilities %}
+                    <tr>
+                      <td>{{ slot.get_day_of_week_display }}</td>
+                      <td>{{ slot.start_time|time:"P" }}</td>
+                      <td>{{ slot.end_time|time:"P" }}</td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            {% else %}
+              <p class="text-muted mb-0">
+                You haven’t added any availability yet. Click "Edit availability" to add your time slots.
+              </p>
+            {% endif %}
+          {% else %}
+            <p class="text-muted mb-0">
+              Mentees don’t publish availability. You can request sessions from mentors directly.
+            </p>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Posts (optional feed on profile) -->
+      <div class="card mb-3">
+        <div class="card-body">
+          <h5 class="card-title mb-2">Posts</h5>
+
+          {% if posts %}
+            <ul class="list-group list-group-flush">
+              {% for post in posts %}
+                <li class="list-group-item px-0">
+                  <p class="mb-1">{{ post.content }}</p>
+                  <small class="text-muted">
+                    {{ post.created_at|date:"M j, Y, g:i a" }}
+                  </small>
+                </li>
+              {% endfor %}
+            </ul>
+          {% else %}
+            <p class="text-muted mb-0">
+              {% if profile.role == "MENTOR" %}
+                You haven’t posted anything yet.
+              {% else %}
+                This user hasn’t posted anything yet.
+              {% endif %}
+            </p>
+          {% endif %}
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+{% endblock %}

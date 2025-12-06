@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4" style="max-width: 700px;">
+    <h1 class="h3 mb-3">Create a Post</h1>
+    <p class="text-muted">
+        Share an update, tip, or opportunity with your mentees and other students.
+    </p>
+
+    <form method="post">
+        {% csrf_token %}
+        <div class="mb-3">
+            {{ form.content.label_tag }}
+            {{ form.content }}
+            {% if form.content.errors %}
+                <div class="text-danger small">
+                    {{ form.content.errors }}
+                </div>
+            {% endif %}
+        </div>
+
+        <button type="submit" class="btn btn-primary">
+            Post
+        </button>
+        <a href="{% url 'feed' %}" class="btn btn-link">
+            Cancel
+        </a>
+    </form>
+</div>
+{% endblock %}

@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4" style="max-width: 800px;">
+    <div class="d-flex align-items-center mb-3">
+    <h1 class="h3 mb-0">Mentor Feed</h1>
+    </div>
+    <p class="text-muted mb-3">
+    See updates, tips, and opportunities shared by mentors.
+    </p>
+
+
+    <p class="text-muted">
+        See updates, tips, and opportunities shared by mentors.
+    </p>
+
+    {% if posts %}
+        {% for post in posts %}
+            <div class="card mb-3">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <strong>{{ post.author.user.username }}</strong>
+                            {% if post.author.skills %}
+                                <span class="text-muted small">
+                                    · {{ post.author.skills }}
+                                </span>
+                            {% endif %}
+                        </div>
+                        <small class="text-muted">
+                            {{ post.created_at|date:"M d, Y H:i" }}
+                        </small>
+                    </div>
+
+                    <p class="mt-2 mb-0">
+                        {{ post.content|linebreaksbr }}
+                    </p>
+                </div>
+            </div>
+        {% endfor %}
+    {% else %}
+        <div class="alert alert-info mt-3">
+            No posts yet. {% if user.is_authenticated and user.profile.role == "MENTOR" %}
+            Be the first to share something!
+            {% else %}
+            Check back later to see what mentors are sharing.
+            {% endif %}
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
