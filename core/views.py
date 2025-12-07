@@ -2,7 +2,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login
 from django.contrib.auth.forms import UserCreationForm
-from .models import Profile, Session, Review, Availability, Message, Connection, Post, PostLike, PostComment
+from .models import Profile, Session, Review, Availability, Message, Connection, Post, PostLike, PostComment, Follow
 from django.contrib.auth import logout
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q, Avg
@@ -79,9 +79,15 @@ def mentor_detail(request, mentor_id):
     reviews = Review.objects.filter(session__mentor=mentor)
     avg_rating = reviews.aggregate(avg=Avg("rating"))["avg"]
 
-    # NEW: figure out connection status between current user and this mentor
-    current_profile = request.user.profile
-    connection = _connection_between(current_profile, mentor)
+    # Is current user following this mentor?
+    is_following = False
+    if request.user.is_authenticated and hasattr(request.user, "profile"):
+        me = request.user.profile
+        if me.role == "MENTEE":
+            is_following = Follow.objects.filter(
+                follower=me,
+                mentor=mentor
+            ).exists()
 
     return render(
         request,
@@ -90,9 +96,11 @@ def mentor_detail(request, mentor_id):
             "mentor": mentor,
             "avg_rating": avg_rating,
             "reviews": reviews,
-            "connection": connection,
+            "is_following": is_following,
         },
     )
+
+
     
 
 @login_required
@@ -490,26 +498,40 @@ def reschedule_session(request, session_id):
 @login_required
 def feed(request):
     """
-    Show a global feed of mentor posts.
-    Both mentors and mentees can like and comment.
+    Show a feed of mentor posts.
+    - Mentees: only posts from mentors they follow.
+    - Mentors: all posts.
     """
     profile = request.user.profile
 
+    if profile.role == "MENTEE":
+        followed_ids = Follow.objects.filter(
+            follower=profile
+        ).values_list("mentor_id", flat=True)
+
+        posts = Post.objects.filter(author_id__in=followed_ids)
+    else:
+        # mentors (or any other role) see all posts
+        posts = Post.objects.all()
+
     posts = (
-        Post.objects
+        posts
         .select_related("author", "author__user")
-        .prefetch_related("likes", "comments", "comments__author", "comments__author__user")
+        .prefetch_related(
+            "likes",
+            "comments",
+            "comments__author",
+            "comments__author__user",
+        )
         .order_by("-created_at")
     )
 
-    # Which posts has this user liked? (used to style the button)
     liked_post_ids = set(
         PostLike.objects
         .filter(user=profile, post__in=posts)
         .values_list("post_id", flat=True)
     )
 
-    # One comment form instance we can reuse (we’ll render it per post)
     comment_form = CommentForm()
 
     return render(
@@ -665,3 +687,59 @@ def add_comment(request, post_id):
         comment.save()
 
     return redirect(request.META.get("HTTP_REFERER", "feed"))
+
+@login_required
+def follow_mentor(request, mentor_id):
+    """
+    Mentee follows a mentor (one-way follow).
+    """
+    profile = request.user.profile
+    mentor = get_object_or_404(Profile, id=mentor_id, role="MENTOR")
+
+    # Only mentees can follow mentors, and you can't follow yourself
+    if profile.role != "MENTEE" or profile == mentor:
+        return redirect("mentor_detail", mentor_id=mentor.id)
+
+    if request.method == "POST":
+        Follow.objects.get_or_create(follower=profile, mentor=mentor)
+
+    return redirect("mentor_detail", mentor_id=mentor.id)
+
+@login_required
+def unfollow_mentor(request, mentor_id):
+    """
+    Mentee unfollows a mentor.
+    """
+    profile = request.user.profile
+    mentor = get_object_or_404(Profile, id=mentor_id, role="MENTOR")
+
+    if profile.role != "MENTEE" or profile == mentor:
+        return redirect("mentor_detail", mentor_id=mentor.id)
+
+    if request.method == "POST":
+        Follow.objects.filter(follower=profile, mentor=mentor).delete()
+
+    return redirect("mentor_detail", mentor_id=mentor.id)
+
+@login_required
+def toggle_follow(request, mentor_id):
+    """
+    Mentee follows / unfollows a mentor.
+    """
+    profile = request.user.profile
+    mentor = get_object_or_404(Profile, id=mentor_id, role="MENTOR")
+
+    # Only mentees can follow mentors
+    if profile.role != "MENTEE":
+        return redirect("mentor_detail", mentor_id=mentor.id)
+
+    if request.method == "POST":
+        follow, created = Follow.objects.get_or_create(
+            follower=profile,
+            mentor=mentor,
+        )
+        if not created:
+            # already following -> unfollow
+            follow.delete()
+
+    return redirect("mentor_detail", mentor_id=mentor.id)

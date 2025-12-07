@@ -51,6 +51,9 @@ urlpatterns = [
     path("posts/new/", views.create_post, name="create_post"),
     path("posts/<int:post_id>/like/", views.toggle_like, name="toggle_like"),
     path("posts/<int:post_id>/comment/", views.add_comment, name="add_comment"),
+    path("mentors/<int:mentor_id>/follow/", views.follow_mentor, name="follow_mentor"),
+    path("mentors/<int:mentor_id>/unfollow/", views.unfollow_mentor, name="unfollow_mentor"),
+    path("mentors/<int:mentor_id>/follow/", views.toggle_follow, name="toggle_follow"),
 ]
     
 

@@ -266,3 +266,32 @@ class PostComment(models.Model):
 
     def __str__(self):
         return f"Comment by {self.author.user.username} on Post #{self.post.id}"
+
+class Follow(models.Model):
+    """
+    Mentees can follow mentors.
+    follower -> mentee
+    mentor   -> mentor profile being followed
+    """
+    follower = models.ForeignKey(
+        "Profile",
+        related_name="following",
+        on_delete=models.CASCADE,
+    )
+    mentor = models.ForeignKey(
+        "Profile",
+        related_name="followers",
+        on_delete=models.CASCADE,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["follower", "mentor"],
+                name="unique_mentee_follow_mentor",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.follower.user.username} → {self.mentor.user.username}"
