@@ -114,28 +114,30 @@ def create_profile_for_new_user(sender, instance, created, **kwargs):
         Profile.objects.create(user=instance, role="MENTEE")
 #-------------------------ENDS HERE-------------------------------------------
 class Availability(models.Model):
-    DAY_CHOICES = [
-        (0, "Monday"),
-        (1, "Tuesday"),
-        (2, "Wednesday"),
-        (3, "Thursday"),
-        (4, "Friday"),
-        (5, "Saturday"),
-        (6, "Sunday"),
+    DAY_OF_WEEK_CHOICES = [
+        ("MONDAY", "Monday"),
+        ("TUESDAY", "Tuesday"),
+        ("WEDNESDAY", "Wednesday"),
+        ("THURSDAY", "Thursday"),
+        ("FRIDAY", "Friday"),
+        ("SATURDAY", "Saturday"),
+        ("SUNDAY", "Sunday"),
     ]
 
     mentor = models.ForeignKey(
         Profile,
-        on_delete=models.CASCADE,
         related_name="availabilities",
+        on_delete=models.CASCADE,
     )
-    day_of_week = models.IntegerField(choices=DAY_CHOICES)
+    day_of_week = models.CharField(
+        max_length=10,
+        choices=DAY_OF_WEEK_CHOICES,
+    )
     start_time = models.TimeField()
     end_time = models.TimeField()
 
     def __str__(self):
-        return f"{self.mentor.user.username} - {self.get_day_of_week_display()} {self.start_time}-{self.end_time}"
-
+        return f"{self.mentor} - {self.day_of_week} {self.start_time}-{self.end_time}"
 
 class Connection(models.Model):
     """

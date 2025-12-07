@@ -46,8 +46,7 @@ urlpatterns = [
     ),
     path("profile/", views.profile_view, name="profile"),
     path("profile/edit/", views.edit_profile, name="edit_profile"),
-    
-
+    path("availability/<int:availability_id>/delete/", views.delete_availability, name="delete_availability"),
 ]
     
 

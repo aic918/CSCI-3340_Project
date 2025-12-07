@@ -68,15 +68,27 @@ class ReviewForm(forms.ModelForm):
             }),
         }
 
-class AvailabilityForm(forms.ModelForm):
-    class Meta:
-        model = Availability
-        fields = ["day_of_week", "start_time", "end_time"]
-        widgets = {
-            "day_of_week": forms.Select(attrs={"class": "form-select"}),
-            "start_time": forms.TimeInput(attrs={"class": "form-control", "type": "time"}),
-            "end_time": forms.TimeInput(attrs={"class": "form-control", "type": "time"}),
-        }
+class AvailabilityForm(forms.Form):
+    """
+    Let mentors select multiple days at once for the same time range.
+    """
+    day_of_week = forms.MultipleChoiceField(
+        choices=Availability.DAY_OF_WEEK_CHOICES,  # uses the choices defined in the model
+        widget=forms.CheckboxSelectMultiple,
+        label="Days of the week",
+    )
+    start_time = forms.TimeField(
+        widget=forms.TimeInput(
+            attrs={"type": "time", "class": "form-control"}
+        ),
+        label="Start time",
+    )
+    end_time = forms.TimeField(
+        widget=forms.TimeInput(
+            attrs={"type": "time", "class": "form-control"}
+        ),
+        label="End time",
+    )
 
 class MessageForm(forms.ModelForm):
     class Meta:

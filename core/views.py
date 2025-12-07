@@ -8,6 +8,26 @@ from django.contrib.auth.decorators import login_required
 from django.db.models import Q, Avg
 from .forms import SessionRequestForm, ProfileForm, ReviewForm, AvailabilityForm, MessageForm, RescheduleForm
 from django import forms
+from django.views.decorators.http import require_POST
+
+@login_required
+@require_POST
+def delete_availability(request, availability_id):
+    """
+    Delete a single availability entry for the logged-in mentor.
+    """
+    profile = request.user.profile
+
+    # Only allow deleting your own availability
+    availability = get_object_or_404(
+        Availability,
+        id=availability_id,
+        mentor=profile,
+    )
+
+    availability.delete()
+    return redirect("edit_availability")
+
 
 def _connection_between(p1, p2):
     """
@@ -345,20 +365,35 @@ def edit_availability(request):
     if request.method == "POST":
         form = AvailabilityForm(request.POST)
         if form.is_valid():
-            availability = form.save(commit=False)
-            availability.mentor = profile
-            availability.save()
-            return redirect("profile")
+            days = form.cleaned_data["day_of_week"]   # this is a list, e.g. ["MONDAY", "WEDNESDAY"]
+            start = form.cleaned_data["start_time"]
+            end = form.cleaned_data["end_time"]
+
+            # Create one Availability row per selected day
+            for day in days:
+                Availability.objects.create(
+                    mentor=profile,
+                    day_of_week=day,
+                    start_time=start,
+                    end_time=end,
+                )
+
+            return redirect("edit_availability")
     else:
         form = AvailabilityForm()
 
+    # Existing availabilities (unchanged)
     availabilities = profile.availabilities.all().order_by("day_of_week", "start_time")
 
     return render(
         request,
         "core/edit_availability.html",
-        {"form": form, "availabilities": availabilities},
+        {
+            "form": form,
+            "availabilities": availabilities,
+        },
     )
+
 
 @login_required
 def inbox(request):
