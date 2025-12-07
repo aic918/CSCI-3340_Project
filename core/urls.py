@@ -47,6 +47,10 @@ urlpatterns = [
     path("profile/", views.profile_view, name="profile"),
     path("profile/edit/", views.edit_profile, name="edit_profile"),
     path("availability/<int:availability_id>/delete/", views.delete_availability, name="delete_availability"),
+    path("feed/", views.feed, name="feed"),
+    path("posts/new/", views.create_post, name="create_post"),
+    path("posts/<int:post_id>/like/", views.toggle_like, name="toggle_like"),
+    path("posts/<int:post_id>/comment/", views.add_comment, name="add_comment"),
 ]
     
 

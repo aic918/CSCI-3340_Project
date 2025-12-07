@@ -1,5 +1,5 @@
 from django import forms
-from .models import Session, Profile, Review, Availability, Message
+from .models import Session, Profile, Review, Availability, Message, Post, PostComment
 from django.utils import timezone
 
 
@@ -116,3 +116,17 @@ class RescheduleForm(forms.ModelForm):
         if dt and dt < timezone.now():
             raise forms.ValidationError("Please choose a date and time in the future.")
         return dt
+    
+class CommentForm(forms.ModelForm):
+    class Meta:
+        model = PostComment
+        fields = ["text"]
+        widgets = {
+            "text": forms.Textarea(
+                attrs={
+                    "class": "form-control",
+                    "rows": 2,
+                    "placeholder": "Add a comment…",
+                }
+            )
+        }

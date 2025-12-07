@@ -2,11 +2,11 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login
 from django.contrib.auth.forms import UserCreationForm
-from .models import Profile, Session, Review, Availability, Message, Connection, Post
+from .models import Profile, Session, Review, Availability, Message, Connection, Post, PostLike, PostComment
 from django.contrib.auth import logout
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q, Avg
-from .forms import SessionRequestForm, ProfileForm, ReviewForm, AvailabilityForm, MessageForm, RescheduleForm
+from .forms import SessionRequestForm, ProfileForm, ReviewForm, AvailabilityForm, MessageForm, RescheduleForm, CommentForm
 from django import forms
 from django.views.decorators.http import require_POST
 
@@ -225,13 +225,11 @@ def my_sessions(request):
 @login_required
 def profile_view(request):
     """
-    Show a LinkedIn-style profile page for the currently logged-in user,
-    including availability (for mentors), stats, and posts.
+    Show a LinkedIn-style profile page for the currently logged-in user.
     """
     profile = request.user.profile
     is_mentor = (profile.role == "MENTOR")
 
-    # --- Stats (optional, but nice) ---
     if is_mentor:
         sessions_as_mentor = Session.objects.filter(mentor=profile)
         total_sessions = sessions_as_mentor.count()
@@ -247,33 +245,35 @@ def profile_view(request):
         total_sessions = sessions_as_mentee.count()
         completed = sessions_as_mentee.filter(status="COMPLETED").count()
         pending = sessions_as_mentee.filter(status="PENDING").count()
-        avg_rating = None  # mentees don’t have ratings
+        avg_rating = None
 
-    # --- Availability (read-only on profile) ---
-    availabilities = (
-        profile.availabilities.all()
-        .order_by("day_of_week", "start_time")
-    )
-
-    # --- Posts authored by this profile ---
     posts = (
-        Post.objects.filter(author=profile)
-        .select_related("author", "author__user")
+        Post.objects
+        .filter(author=profile)
+        .prefetch_related("likes", "comments", "comments__author", "comments__author__user")
         .order_by("-created_at")
     )
 
+    liked_post_ids = set(
+        PostLike.objects
+        .filter(user=profile, post__in=posts)
+        .values_list("post_id", flat=True)
+    )
+
+    comment_form = CommentForm()
+
     context = {
-        "profile": profile,              # <-- key name used in profile.html
+        "profile_obj": profile,
         "is_mentor": is_mentor,
         "total_sessions": total_sessions,
         "completed": completed,
         "pending": pending,
         "avg_rating": avg_rating,
-        "availabilities": availabilities,
         "posts": posts,
+        "liked_post_ids": liked_post_ids,
+        "comment_form": comment_form,
     }
     return render(request, "core/profile.html", context)
-
 
 
 
@@ -486,26 +486,38 @@ def reschedule_session(request, session_id):
 @login_required
 def feed(request):
     """
-    Show a simple global feed of mentor posts.
-    Only mentors can create posts, but mentees can read them.
+    Show a global feed of mentor posts.
+    Both mentors and mentees can like and comment.
     """
     profile = request.user.profile
-    is_mentor = (profile.role == "MENTOR")
 
     posts = (
         Post.objects
         .select_related("author", "author__user")
+        .prefetch_related("likes", "comments", "comments__author", "comments__author__user")
         .order_by("-created_at")
     )
+
+    # Which posts has this user liked? (used to style the button)
+    liked_post_ids = set(
+        PostLike.objects
+        .filter(user=profile, post__in=posts)
+        .values_list("post_id", flat=True)
+    )
+
+    # One comment form instance we can reuse (we’ll render it per post)
+    comment_form = CommentForm()
 
     return render(
         request,
         "core/feed.html",
         {
             "posts": posts,
-            "is_mentor": is_mentor,   # <--- used in the template
+            "liked_post_ids": liked_post_ids,
+            "comment_form": comment_form,
         },
     )
+
 
 # core/views.py (near the bottom)
 class PostForm(forms.ModelForm):
@@ -614,3 +626,38 @@ def respond_connection_request(request, connection_id, action):
 
     return redirect("dashboard")
 
+@login_required
+@require_POST
+def toggle_like(request, post_id):
+    """
+    Toggle like/unlike on a post for the current user.
+    """
+    profile = request.user.profile
+    post = get_object_or_404(Post, id=post_id)
+
+    like, created = PostLike.objects.get_or_create(post=post, user=profile)
+    if not created:
+        # Already liked -> unlike
+        like.delete()
+
+    # Go back to where user came from (feed/profile)
+    return redirect(request.META.get("HTTP_REFERER", "feed"))
+
+
+@login_required
+@require_POST
+def add_comment(request, post_id):
+    """
+    Add a comment to a post.
+    """
+    profile = request.user.profile
+    post = get_object_or_404(Post, id=post_id)
+
+    form = CommentForm(request.POST)
+    if form.is_valid():
+        comment = form.save(commit=False)
+        comment.post = post
+        comment.author = profile
+        comment.save()
+
+    return redirect(request.META.get("HTTP_REFERER", "feed"))

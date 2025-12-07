@@ -200,3 +200,41 @@ class Post(models.Model):
 
     def __str__(self):
         return f"Post by {self.author.user.username} on {self.created_at:%Y-%m-%d}"
+
+
+class PostLike(models.Model):
+    post = models.ForeignKey(
+        Post,
+        related_name="likes",
+        on_delete=models.CASCADE,
+    )
+    user = models.ForeignKey(
+        Profile,
+        related_name="post_likes",
+        on_delete=models.CASCADE,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("post", "user")
+
+    def __str__(self):
+        return f"{self.user.user.username} likes Post #{self.post.id}"
+
+
+class PostComment(models.Model):
+    post = models.ForeignKey(
+        Post,
+        related_name="comments",
+        on_delete=models.CASCADE,
+    )
+    author = models.ForeignKey(
+        Profile,
+        related_name="comments",
+        on_delete=models.CASCADE,
+    )
+    text = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Comment by {self.author.user.username} on Post #{self.post.id}"
