@@ -230,6 +230,7 @@ def profile_view(request):
     profile = request.user.profile
     is_mentor = (profile.role == "MENTOR")
 
+    # Stats
     if is_mentor:
         sessions_as_mentor = Session.objects.filter(mentor=profile)
         total_sessions = sessions_as_mentor.count()
@@ -247,20 +248,18 @@ def profile_view(request):
         pending = sessions_as_mentee.filter(status="PENDING").count()
         avg_rating = None
 
-    posts = (
-        Post.objects
-        .filter(author=profile)
-        .prefetch_related("likes", "comments", "comments__author", "comments__author__user")
-        .order_by("-created_at")
-    )
+    # Availability – only mentors publish availability
+    if is_mentor:
+        availabilities = (
+            Availability.objects
+            .filter(mentor=profile)
+            .order_by("day_of_week", "start_time")
+        )
+    else:
+        availabilities = []
 
-    liked_post_ids = set(
-        PostLike.objects
-        .filter(user=profile, post__in=posts)
-        .values_list("post_id", flat=True)
-    )
-
-    comment_form = CommentForm()
+    # Posts – only mentors will actually have any, but showing for consistency
+    posts = Post.objects.filter(author=profile).order_by("-created_at")
 
     context = {
         "profile_obj": profile,
@@ -269,9 +268,8 @@ def profile_view(request):
         "completed": completed,
         "pending": pending,
         "avg_rating": avg_rating,
+        "availabilities": availabilities,
         "posts": posts,
-        "liked_post_ids": liked_post_ids,
-        "comment_form": comment_form,
     }
     return render(request, "core/profile.html", context)
 

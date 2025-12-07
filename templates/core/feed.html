@@ -2,103 +2,100 @@
 
 {% block content %}
 <div class="container mt-4" style="max-width: 800px;">
+
     <h1>Mentor Feed</h1>
     <p class="text-muted">
         See updates, tips, and opportunities shared by mentors.
     </p>
 
+    <!-- Create Post Button (Mentors Only) -->
     {% if user.profile.role == "MENTOR" %}
-        <div class="mb-3">
-            <a href="{% url 'create_post' %}" class="btn btn-primary">
-                + Create Post
-            </a>
-        </div>
+        <a href="{% url 'create_post' %}" class="btn btn-primary mb-3">
+            + Create Post
+        </a>
     {% endif %}
 
+    <!-- Posts List -->
     {% if posts %}
         {% for post in posts %}
             <div class="card mb-3">
                 <div class="card-body">
-                    <div class="d-flex align-items-center mb-2">
-                        {% if post.author.photo %}
-                            <img src="{{ post.author.photo.url }}"
-                                 alt="{{ post.author.user.username }}"
-                                 class="rounded-circle me-2"
-                                 style="width: 40px; height: 40px; object-fit: cover;">
-                        {% endif %}
+
+                    <!-- Header: Author + Date + Edit button -->
+                    <div class="d-flex justify-content-between align-items-start mb-2">
                         <div>
                             <strong>{{ post.author.user.username }}</strong><br>
                             <small class="text-muted">
-                                {{ post.created_at|date:"M j, Y, g:i a" }}
+                                {{ post.created_at|date:"M d, Y, g:i a" }}
                             </small>
                         </div>
+
+                        {% if user.is_authenticated and user.profile == post.author %}
+                            <a href="{% url 'edit_post' post.id %}"
+                               class="btn btn-sm btn-outline-secondary">
+                                Edit
+                            </a>
+                        {% endif %}
                     </div>
 
-                    <p class="mb-2">{{ post.content|linebreaks }}</p>
+                    <!-- Post Text -->
+                    <p class="mb-2">{{ post.content }}</p>
 
+                    <!-- Post Image -->
                     {% if post.image %}
                         <img src="{{ post.image.url }}"
                              alt="Post image"
-                             class="img-fluid rounded mb-2">
+                             class="img-fluid rounded mb-2"
+                             style="max-height: 300px; object-fit: cover;">
                     {% endif %}
 
-                    <!-- Reactions row -->
-                    <div class="d-flex align-items-center mb-2">
-                        <form method="post"
-                              action="{% url 'toggle_like' post.id %}"
-                              class="me-2">
-                            {% csrf_token %}
-                            <button type="submit"
-                                    class="btn btn-sm {% if post.id in liked_post_ids %}btn-outline-primary{% else %}btn-outline-secondary{% endif %}">
-                                {% if post.id in liked_post_ids %}
-                                    👍 Liked
-                                {% else %}
-                                    👍 Like
-                                {% endif %}
-                            </button>
-                        </form>
-
-                        <span class="text-muted me-3">
-                            {{ post.likes.count }} like{{ post.likes.count|pluralize }}
-                        </span>
-
-                        <span class="text-muted">
-                            {{ post.comments.count }} comment{{ post.comments.count|pluralize }}
-                        </span>
-                    </div>
-
-                    <!-- Comments list -->
-                    {% if post.comments.all %}
-                        <ul class="list-unstyled mb-2">
-                            {% for c in post.comments.all %}
-                                <li class="mb-1">
-                                    <strong>{{ c.author.user.username }}</strong>
-                                    <small class="text-muted">
-                                        · {{ c.created_at|date:"M j, g:i a" }}
-                                    </small>
-                                    <br>
-                                    {{ c.text|linebreaks }}
-                                </li>
-                            {% endfor %}
-                        </ul>
-                    {% endif %}
-
-                    <!-- Add comment -->
-                    <form method="post"
-                          action="{% url 'add_comment' post.id %}">
+                    <!-- Like Button -->
+                    <form method="post" action="{% url 'toggle_like' post.id %}">
                         {% csrf_token %}
-                        <div class="mb-2">
-                            {{ comment_form.text }}
+                        <button type="submit"
+                                class="btn btn-sm {% if post.is_liked_by_user %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                            👍 {% if post.is_liked_by_user %}Liked{% else %}Like{% endif %}
+                        </button>
+
+                        <span class="ms-2 small">
+                            {{ post.likes.count }} like{% if post.likes.count != 1 %}s{% endif %}
+                            &nbsp;•&nbsp;
+                            {{ post.comments.count }} comment{% if post.comments.count != 1 %}s{% endif %}
+                        </span>
+                    </form>
+
+                    <hr>
+
+                    <!-- Comments List -->
+                    {% for comment in post.comments.all %}
+                        <div class="mb-1">
+                            <strong>{{ comment.author.user.username }}</strong>
+                            <small class="text-muted">
+                                · {{ comment.created_at|date:"M d, Y, g:i a" }}
+                            </small>
+                            <div>{{ comment.text }}</div>
                         </div>
-                        <button type="submit" class="btn btn-sm btn-outline-primary">
+                    {% empty %}
+                        <p class="text-muted mb-1">No comments yet.</p>
+                    {% endfor %}
+
+                    <!-- Add Comment -->
+                    <form method="post" action="{% url 'add_comment' post.id %}" class="mt-2">
+                        {% csrf_token %}
+                        <textarea name="text"
+                                  rows="1"
+                                  class="form-control mb-2"
+                                  placeholder="Add a comment..."></textarea>
+                        <button type="submit" class="btn btn-sm btn-primary">
                             Comment
                         </button>
                     </form>
+
                 </div>
             </div>
         {% endfor %}
     {% else %}
-        <div class="alert alert-info mt-3">
+        <div class="alert alert-info">
             No posts yet. Be the first to share something!
         </div>
     {% endif %}
