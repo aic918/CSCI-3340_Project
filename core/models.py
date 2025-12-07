@@ -184,12 +184,17 @@ class Post(models.Model):
         on_delete=models.CASCADE,
     )
     content = models.TextField()
+    image = models.ImageField(
+        upload_to="post_images/",
+        blank=True,
+        null=True,
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
-    # Optional: later you can add images, tags, etc.
+    # Optional: later you can add tags, etc.
 
     class Meta:
         ordering = ["-created_at"]  # newest first
 
     def __str__(self):
-        return f"Post by {self.author} at {self.created_at}"
+        return f"Post by {self.author.user.username} on {self.created_at:%Y-%m-%d}"

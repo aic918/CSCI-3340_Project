@@ -452,21 +452,31 @@ def reschedule_session(request, session_id):
 def feed(request):
     """
     Show a simple global feed of mentor posts.
-    Later we can filter to connections only.
+    Only mentors can create posts, but mentees can read them.
     """
-    posts = Post.objects.select_related("author", "author__user")
+    profile = request.user.profile
+    is_mentor = (profile.role == "MENTOR")
+
+    posts = (
+        Post.objects
+        .select_related("author", "author__user")
+        .order_by("-created_at")
+    )
 
     return render(
         request,
         "core/feed.html",
         {
             "posts": posts,
+            "is_mentor": is_mentor,   # <--- used in the template
         },
     )
+
+# core/views.py (near the bottom)
 class PostForm(forms.ModelForm):
     class Meta:
         model = Post
-        fields = ["content"]
+        fields = ["content", "image"]
         widgets = {
             "content": forms.Textarea(
                 attrs={
@@ -474,8 +484,9 @@ class PostForm(forms.ModelForm):
                     "rows": 3,
                     "placeholder": "Share an update, tip, or opportunity..."
                 }
-            )
+            ),
         }
+
 
 
 @login_required
@@ -487,7 +498,7 @@ def create_post(request):
         return redirect("feed")
 
     if request.method == "POST":
-        form = PostForm(request.POST)
+        form = PostForm(request.POST, request.FILES)
         if form.is_valid():
             post = form.save(commit=False)
             post.author = profile
@@ -497,6 +508,26 @@ def create_post(request):
         form = PostForm()
 
     return render(request, "core/create_post.html", {"form": form})
+
+
+@login_required
+def edit_post(request, post_id):
+    post = get_object_or_404(Post, id=post_id)
+
+    # Only the author can edit
+    if request.user.profile != post.author:
+        return redirect("feed")
+
+    if request.method == "POST":
+        form = PostForm(request.POST, request.FILES, instance=post)
+        if form.is_valid():
+            form.save()
+            return redirect("feed")
+    else:
+        form = PostForm(instance=post)
+
+    return render(request, "core/edit_post.html", {"form": form, "post": post})
+
 
 @login_required
 def send_connection_request(request, mentor_id):

@@ -31,6 +31,7 @@ urlpatterns = [
     # Feed + posts
     path("feed/", views.feed, name="feed"),
     path("posts/new/", views.create_post, name="create_post"),
+    path("posts/<int:post_id>/edit/", views.edit_post, name="edit_post"),
 
     # Connections
     path(
