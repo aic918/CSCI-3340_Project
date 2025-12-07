@@ -57,7 +57,8 @@ def mentor_list(request):
         mentors = mentors.filter(
             Q(user__username__icontains=query) |
             Q(bio__icontains=query) |
-            Q(skills__icontains=query)
+            Q(skills__icontains=query) |
+            Q(public_id__iexact=query)
         )
 
     # NEW: annotate average rating for each mentor
@@ -277,7 +278,6 @@ def profile_view(request):
 
 @login_required
 def edit_profile(request):
-    # Make sure the user has a Profile
     profile, created = Profile.objects.get_or_create(
         user=request.user,
         defaults={"role": "MENTEE"}  # default if they somehow had none
@@ -286,12 +286,17 @@ def edit_profile(request):
     if request.method == "POST":
         form = ProfileForm(request.POST, request.FILES, instance=profile)
         if form.is_valid():
-            form.save()
-            return redirect("profile")  # or 'mentor_list' / 'dashboard' if you prefer
+            profile = form.save(commit=False)
+
+            # 🔒 Mentees can never have an hourly rate
+            if profile.role != "MENTOR":
+                profile.hourly_rate = None
+
+            profile.save()
+            return redirect("profile")  # after editing, go back to profile page
     else:
         form = ProfileForm(instance=profile)
 
-    # We can show slightly different text depending on role
     is_mentor = profile.role == "MENTOR"
 
     return render(
@@ -299,6 +304,7 @@ def edit_profile(request):
         "core/edit_profile.html",
         {"form": form, "is_mentor": is_mentor},
     )
+
 
 
 @login_required

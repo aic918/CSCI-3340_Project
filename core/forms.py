@@ -3,6 +3,7 @@ from .models import Session, Profile, Review, Availability, Message, Post, PostC
 from django.utils import timezone
 
 
+
 class SessionRequestForm(forms.ModelForm):
     class Meta:
         model = Session
@@ -19,11 +20,24 @@ class SessionRequestForm(forms.ModelForm):
                 }
             ),
         }
-        def clean_scheduled_at(self):
-            dt = self.cleaned_data["scheduled_at"]
-            if dt and dt < timezone.now():
-                raise forms.ValidationError("Please choose a date and time in the future.")
-            return dt
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # HTML-level restriction: can’t pick a time before now
+        now = timezone.now()
+        self.fields["scheduled_at"].widget.attrs["min"] = now.strftime("%Y-%m-%dT%H:%M")
+
+    def clean_scheduled_at(self):
+        dt = self.cleaned_data.get("scheduled_at")
+
+        if not dt:
+            return dt  # let required/blank validation handle empties
+
+        if dt < timezone.now():
+            raise forms.ValidationError("Please choose a date and time in the future.")
+
+        return dt
+
 
 
 class ProfileForm(forms.ModelForm):

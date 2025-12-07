@@ -20,13 +20,28 @@
             </div>
 
             <h3 class="mb-0">{{ profile_obj.user.username }}</h3>
-            <p class="text-muted">
+            <p class="text-muted mb-1">
                 {% if profile_obj.role == "MENTOR" %}
                     Mentor
                 {% else %}
                     Mentee
                 {% endif %}
             </p>
+
+            {# PUBLIC ID WITH COPY BUTTON #}
+            {% if profile_obj.public_id %}
+                <p class="small text-muted mb-2">
+                    ID:
+                    <span id="public-id-text">{{ profile_obj.public_id }}</span>
+                    <button
+                        type="button"
+                        class="btn btn-sm btn-outline-secondary ms-2"
+                        onclick="navigator.clipboard.writeText('{{ profile_obj.public_id }}'); alert('ID copied to clipboard');"
+                    >
+                        Copy ID
+                    </button>
+                </p>
+            {% endif %}
 
             {% if profile_obj.skills %}
                 <p class="mb-1">
@@ -59,38 +74,34 @@
         </div>
     </div>
 
-    <!-- AVAILABILITY -->
+        {% if is_mentor %}
+    <!-- AVAILABILITY (MENTORS ONLY) -->
     <div class="card mb-3">
         <div class="card-body">
             <h5 class="card-title">Availability</h5>
 
-            {% if profile_obj.role == "MENTOR" %}
-                {% if availabilities %}
-                    <ul class="list-unstyled mb-0">
-                        {% for a in availabilities %}
-                            <li class="mb-1">
-                                <strong>{{ a.get_day_of_week_display }}:</strong>
-                                {{ a.start_time|time:"g:i a" }} – {{ a.end_time|time:"g:i a" }}
-                            </li>
-                        {% endfor %}
-                    </ul>
-                    <p class="text-muted mt-2 mb-0">
-                        To update your availability, go to
-                        <a href="{% url 'edit_availability' %}">My Availability</a>.
-                    </p>
-                {% else %}
-                    <p class="text-muted mb-0">
-                        You haven’t added any availability yet.
-                        Set it on the <a href="{% url 'edit_availability' %}">My Availability</a> page.
-                    </p>
-                {% endif %}
+            {% if availabilities %}
+                <ul class="list-unstyled mb-0">
+                    {% for a in availabilities %}
+                        <li class="mb-1">
+                            <strong>{{ a.get_day_of_week_display }}:</strong>
+                            {{ a.start_time|time:"g:i a" }} – {{ a.end_time|time:"g:i a" }}
+                        </li>
+                    {% endfor %}
+                </ul>
+                <p class="text-muted mt-2 mb-0">
+                    To update your availability, go to
+                    <a href="{% url 'edit_availability' %}">My Availability</a>.
+                </p>
             {% else %}
                 <p class="text-muted mb-0">
-                    Mentees don’t publish availability. You can request sessions from mentors directly.
+                    You haven’t added any availability yet.
+                    Set it on the <a href="{% url 'edit_availability' %}">My Availability</a> page.
                 </p>
             {% endif %}
         </div>
     </div>
+    {% endif %}
 
     <!-- POSTS (MENTORS ONLY) -->
     {% if is_mentor %}

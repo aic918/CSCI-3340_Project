@@ -3,6 +3,9 @@ from django.db import models
 # Create your models here.
 from django.conf import settings
 from django.db import models
+from django.contrib.auth.models import User
+import random
+import string
 
 
 class Profile(models.Model):
@@ -17,6 +20,16 @@ class Profile(models.Model):
         related_name="profile",
     )
     role = models.CharField(max_length=10, choices=ROLE_CHOICES)
+
+    # NEW: shareable Mentora ID (e.g. "482931")
+    public_id = models.CharField(
+        max_length=10,
+        unique=True,
+        editable=False,
+        blank=True,
+        null=True,
+    )
+
     bio = models.TextField(blank=True)
     skills = models.CharField(
         max_length=255,
@@ -30,7 +43,7 @@ class Profile(models.Model):
         blank=True,
         help_text="Only for mentors",
     )
-     # Optional: if you already added this earlier for profile pictures
+    # Optional: if you already added this earlier for profile pictures
     photo = models.ImageField(
         upload_to="profiles/",
         blank=True,
@@ -40,6 +53,21 @@ class Profile(models.Model):
     def __str__(self):
         return f"{self.user.username} ({self.get_role_display()})"
 
+    # ------- NEW: auto-generate public_id once -------
+    def save(self, *args, **kwargs):
+        if not self.public_id:
+            self.public_id = self._generate_public_id()
+        super().save(*args, **kwargs)
+
+    def _generate_public_id(self):
+        """
+        Generate a 6-digit numeric ID like 482931.
+        Loops until it finds one that isn't already used.
+        """
+        while True:
+            new_id = "".join(random.choices(string.digits, k=6))
+            if not Profile.objects.filter(public_id=new_id).exists():
+                return new_id
 
 class Session(models.Model):
     STATUS_CHOICES = [
