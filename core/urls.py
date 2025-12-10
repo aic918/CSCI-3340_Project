@@ -54,6 +54,8 @@ urlpatterns = [
     path("mentors/<int:mentor_id>/follow/", views.follow_mentor, name="follow_mentor"),
     path("mentors/<int:mentor_id>/unfollow/", views.unfollow_mentor, name="unfollow_mentor"),
     path("mentors/<int:mentor_id>/follow/", views.toggle_follow, name="toggle_follow"),
+    path("following/", views.my_follows, name="my_follows"),
+    path("profiles/<int:profile_id>/", views.profile_public, name="profile_public"),
 ]
     
 

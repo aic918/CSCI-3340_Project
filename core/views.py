@@ -76,17 +76,26 @@ def mentor_list(request):
 @login_required
 def mentor_detail(request, mentor_id):
     mentor = get_object_or_404(Profile, id=mentor_id, role="MENTOR")
+
+    # Reviews + average rating
     reviews = Review.objects.filter(session__mentor=mentor)
     avg_rating = reviews.aggregate(avg=Avg("rating"))["avg"]
 
-    # Is current user following this mentor?
+    # Availability for this mentor
+    availabilities = (
+        Availability.objects
+        .filter(mentor=mentor)
+        .order_by("day_of_week", "start_time")
+    )
+
+    # Is current user (if mentee) following this mentor?
     is_following = False
     if request.user.is_authenticated and hasattr(request.user, "profile"):
         me = request.user.profile
         if me.role == "MENTEE":
             is_following = Follow.objects.filter(
                 follower=me,
-                mentor=mentor
+                mentor=mentor,
             ).exists()
 
     return render(
@@ -96,12 +105,11 @@ def mentor_detail(request, mentor_id):
             "mentor": mentor,
             "avg_rating": avg_rating,
             "reviews": reviews,
+            "availabilities": availabilities,
             "is_following": is_following,
         },
     )
 
-
-    
 
 @login_required
 def request_session(request, mentor_id):
@@ -234,7 +242,7 @@ def my_sessions(request):
 @login_required
 def profile_view(request):
     """
-    Show a LinkedIn-style profile page for the currently logged-in user.
+    Show a LinkedIn/Instagram-style profile page for the currently logged-in user.
     """
     profile = request.user.profile
     is_mentor = (profile.role == "MENTOR")
@@ -250,12 +258,24 @@ def profile_view(request):
             .filter(session__mentor=profile)
             .aggregate(Avg("rating"))["rating__avg"]
         )
+        # mentors don't follow anyone for now
+        followed_mentors = []
+        follow_count = 0
     else:
         sessions_as_mentee = Session.objects.filter(mentee=profile)
         total_sessions = sessions_as_mentee.count()
         completed = sessions_as_mentee.filter(status="COMPLETED").count()
         pending = sessions_as_mentee.filter(status="PENDING").count()
         avg_rating = None
+
+        # mentee: who am I following?
+        followed_mentors = (
+            Follow.objects
+            .filter(follower=profile)
+            .select_related("mentor__user")
+            .order_by("mentor__user__username")
+        )
+        follow_count = followed_mentors.count()
 
     # Availability – only mentors publish availability
     if is_mentor:
@@ -279,10 +299,12 @@ def profile_view(request):
         "avg_rating": avg_rating,
         "availabilities": availabilities,
         "posts": posts,
+
+        # NEW for mentee “following” UI
+        "followed_mentors": followed_mentors,
+        "follow_count": follow_count,
     }
     return render(request, "core/profile.html", context)
-
-
 
 @login_required
 def edit_profile(request):
@@ -734,12 +756,112 @@ def toggle_follow(request, mentor_id):
         return redirect("mentor_detail", mentor_id=mentor.id)
 
     if request.method == "POST":
-        follow, created = Follow.objects.get_or_create(
-            follower=profile,
-            mentor=mentor,
-        )
-        if not created:
-            # already following -> unfollow
-            follow.delete()
+        qs = Follow.objects.filter(follower=profile, mentor=mentor)
+
+        if qs.exists():
+            # Already following -> unfollow (delete ALL rows just in case)
+            qs.delete()
+        else:
+            # Not following -> follow
+            Follow.objects.create(follower=profile, mentor=mentor)
 
     return redirect("mentor_detail", mentor_id=mentor.id)
+
+
+@login_required
+def my_follows(request):
+    """
+    Show the list of mentors that the current mentee is following.
+    """
+    profile = request.user.profile
+
+    # Only mentees should have a "following" list
+    if profile.role != "MENTEE":
+        return redirect("dashboard")
+
+    follows = (
+        Follow.objects
+        .filter(follower=profile)
+        .select_related("mentor", "mentor__user")
+        .order_by("-created_at")
+    )
+
+    # You can either pass the Follow objects OR just a list of mentors
+    mentors = [f.mentor for f in follows]
+
+    return render(
+        request,
+        "core/my_follows.html",
+        {
+            "follows": follows,
+            "mentors": mentors,
+        },
+    )
+
+@login_required
+def profile_public(request, profile_id):
+    """
+    View another user's profile (from posts, comments, etc.).
+    Uses the same layout as your own profile, but hides 'Edit profile'
+    and the following list when it's not you.
+    """
+    profile_obj = get_object_or_404(Profile, id=profile_id)
+    is_mentor = (profile_obj.role == "MENTOR")
+
+    # Stats
+    if is_mentor:
+        sessions_as_mentor = Session.objects.filter(mentor=profile_obj)
+        total_sessions = sessions_as_mentor.count()
+        completed = sessions_as_mentor.filter(status="COMPLETED").count()
+        pending = sessions_as_mentor.filter(status="PENDING").count()
+        avg_rating = (
+            Review.objects
+            .filter(session__mentor=profile_obj)
+            .aggregate(Avg("rating"))["rating__avg"]
+        )
+    else:
+        sessions_as_mentee = Session.objects.filter(mentee=profile_obj)
+        total_sessions = sessions_as_mentee.count()
+        completed = sessions_as_mentee.filter(status="COMPLETED").count()
+        pending = sessions_as_mentee.filter(status="PENDING").count()
+        avg_rating = None
+
+    # Availability – only mentors publish availability
+    if is_mentor:
+        availabilities = (
+            Availability.objects
+            .filter(mentor=profile_obj)
+            .order_by("day_of_week", "start_time")
+        )
+    else:
+        availabilities = []
+
+    # Posts by that user
+    posts = Post.objects.filter(author=profile_obj).order_by("-created_at")
+
+    # Following list is only meaningful when you are viewing your own mentee profile
+    if (not is_mentor) and (request.user.profile == profile_obj):
+        followed_mentors = (
+            Follow.objects
+            .filter(follower=profile_obj)
+            .select_related("mentor__user")
+            .order_by("mentor__user__username")
+        )
+        follow_count = followed_mentors.count()
+    else:
+        followed_mentors = []
+        follow_count = 0
+
+    context = {
+        "profile_obj": profile_obj,
+        "is_mentor": is_mentor,
+        "total_sessions": total_sessions,
+        "completed": completed,
+        "pending": pending,
+        "avg_rating": avg_rating,
+        "availabilities": availabilities,
+        "posts": posts,
+        "followed_mentors": followed_mentors,
+        "follow_count": follow_count,
+    }
+    return render(request, "core/profile.html", context)

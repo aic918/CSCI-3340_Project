@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4" style="max-width: 800px;">
+    <h1 class="mb-3">Mentors I Follow</h1>
+    <p class="text-muted">
+        These are the mentors you’re currently following.
+    </p>
+
+    {% if mentors %}
+        <div class="list-group">
+            {% for mentor in mentors %}
+                <div class="list-group-item d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center">
+                        {% if mentor.photo %}
+                            <img src="{{ mentor.photo.url }}"
+                                 alt="{{ mentor.user.username }}"
+                                 class="rounded-circle me-3"
+                                 style="width: 48px; height: 48px; object-fit: cover;">
+                        {% else %}
+                            <div class="rounded-circle bg-secondary me-3"
+                                 style="width: 48px; height: 48px;"></div>
+                        {% endif %}
+
+                        <div>
+                            <h5 class="mb-1">
+                                {{ mentor.user.username }}
+                            </h5>
+                            {% if mentor.skills %}
+                                <div class="text-muted small">
+                                    {{ mentor.skills }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="text-end">
+                        <a href="{% url 'mentor_detail' mentor.id %}"
+                           class="btn btn-sm btn-outline-primary mb-1">
+                            View Profile
+                        </a>
+
+                        <form method="post"
+                              action="{% url 'toggle_follow' mentor.id %}">
+                            {% csrf_token %}
+                            <button type="submit"
+                                    class="btn btn-sm btn-outline-danger">
+                                Unfollow
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p class="mt-3 text-muted">
+            You’re not following any mentors yet.
+            Visit the <a href="{% url 'mentor_list' %}">Find a Mentor</a> page to start following mentors.
+        </p>
+    {% endif %}
+</div>
+{% endblock %}
