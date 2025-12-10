@@ -39,29 +39,33 @@ class SessionRequestForm(forms.ModelForm):
         return dt
 
 
-
 class ProfileForm(forms.ModelForm):
     class Meta:
         model = Profile
-        # Don’t let them change role here – that’s done at signup
-        fields = ["bio", "skills", "hourly_rate"]
+        fields = ["bio", "skills", "hourly_rate", "photo"]  # ← include photo
         widgets = {
-            "bio": forms.Textarea(attrs={
-                "class": "form-control",
-                "rows": 4,
-                "placeholder": "Tell others about your experience, interests, or goals."
-            }),
-            "skills": forms.TextInput(attrs={
-                "class": "form-control",
-                "placeholder": "Comma-separated skills (e.g. Python, Resume Review, Data Science)"
-            }),
-            "hourly_rate": forms.NumberInput(attrs={
-                "class": "form-control",
-                "step": "0.01",
-                "min": "0",
-            }),
-            "photo": forms.ClearableFileInput(attrs={"class": "form-control"}),
+            "bio": forms.Textarea(
+                attrs={
+                    "class": "form-control",
+                    "rows": 4,
+                    "placeholder": "Tell others about yourself...",
+                }
+            ),
+            "skills": forms.TextInput(
+                attrs={
+                    "class": "form-control",
+                    "placeholder": "Data Structures, Python, Machine Learning",
+                }
+            ),
+            "hourly_rate": forms.NumberInput(
+                attrs={
+                    "class": "form-control",
+                    "step": "0.01",
+                }
+            ),
+            # photo uses default file input widget
         }
+
 
 
 class ReviewForm(forms.ModelForm):
