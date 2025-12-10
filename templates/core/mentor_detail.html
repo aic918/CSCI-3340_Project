@@ -34,12 +34,18 @@
 
     {# ACTION BUTTONS FOR MENTEES #}
     {% if user.is_authenticated and user.profile.role == "MENTEE" %}
-        <div class="mt-3 d-flex gap-2">
+        <div class="mt-3 d-flex gap-2 flex-wrap">
 
             {# Request session #}
             <a href="{% url 'request_session' mentor.id %}"
                class="btn btn-success">
                 Request a Session
+            </a>
+
+            {# NEW: Message button -> opens DM thread with this mentor #}
+            <a href="{% url 'conversation' mentor.id %}"
+               class="btn btn-outline-secondary">
+                Message
             </a>
 
             {# Follow / Unfollow mentor #}

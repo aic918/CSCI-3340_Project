@@ -434,13 +434,44 @@ def inbox(request):
     profile = request.user.profile
 
     # All messages involving this profile
-    msgs = Message.objects.filter(
-        Q(sender=profile) | Q(recipient=profile)
-    ).select_related("sender", "recipient").order_by("-sent_at")
+    msgs = (
+        Message.objects.filter(
+            Q(sender=profile) | Q(recipient=profile)
+        )
+        .select_related("sender__user", "recipient__user")
+        .order_by("-sent_at")
+    )
 
-    # Very simple: just show a flat list for now
-    return render(request, "core/inbox.html", {"messages": msgs})
+    # Contacts you can start a conversation with
+    if profile.role == "MENTEE":
+        # mentee -> mentors they follow
+        contacts = (
+            Profile.objects
+            .filter(
+                id__in=Follow.objects.filter(follower=profile)
+                                      .values_list("mentor_id", flat=True)
+            )
+            .select_related("user")
+        )
+    else:
+        # mentor -> mentees that follow them
+        contacts = (
+            Profile.objects
+            .filter(
+                id__in=Follow.objects.filter(mentor=profile)
+                                      .values_list("follower_id", flat=True)
+            )
+            .select_related("user")
+        )
 
+    return render(
+        request,
+        "core/inbox.html",
+        {
+            "messages": msgs,
+            "contacts": contacts,
+        },
+    )
 
 @login_required
 def conversation(request, profile_id):

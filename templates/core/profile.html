@@ -45,12 +45,11 @@
 
             {% if profile_obj.skills %}
                 <p class="mb-1">
-                     {% if profile_obj.role == "MENTOR" %}
-                    <strong>Skills:</strong>
+                    {% if profile_obj.role == "MENTOR" %}
+                        <strong>Skills you can help with:</strong> {{ profile_obj.skills }}
                     {% else %}
-                    <strong>Topics of Interest:</strong>
+                        <strong>Topics of interest:</strong> {{ profile_obj.skills }}
                     {% endif %}
-                    {{ profile_obj.skills }}
                 </p>
             {% endif %}
 
@@ -60,8 +59,8 @@
                 </p>
             {% endif %}
 
-            {# INSTAGRAM-STYLE FOLLOWING COUNT (ONLY ON YOUR OWN MENTEE PROFILE) #}
-            {% if not is_mentor and user.profile == profile_obj %}
+            {# INSTAGRAM-STYLE FOLLOWING COUNT (MENTEES ONLY, OWN PROFILE) #}
+            {% if not is_mentor and user.is_authenticated and user.profile == profile_obj %}
                 <p class="mb-2">
                     <button class="btn btn-link p-0"
                             type="button"
@@ -74,13 +73,21 @@
                 </p>
             {% endif %}
 
-            {# Edit button only on your own profile #}
-            {% if user.profile == profile_obj %}
-                <a href="{% url 'edit_profile' %}"
-                   class="btn btn-outline-primary btn-sm">
-                    Edit profile
-                </a>
-            {% endif %}
+            <div class="mt-2">
+                {# If this is *your* profile -> Edit button #}
+                {% if user.is_authenticated and user.profile == profile_obj %}
+                    <a href="{% url 'edit_profile' %}"
+                       class="btn btn-outline-primary btn-sm">
+                        Edit profile
+                    </a>
+                {% else %}
+                    {# Viewing someone else's profile -> Message button #}
+                    <a href="{% url 'conversation' profile_obj.id %}"
+                       class="btn btn-outline-secondary btn-sm">
+                        Message
+                    </a>
+                {% endif %}
+            </div>
         </div>
     </div>
 
@@ -96,72 +103,72 @@
         </div>
     </div>
 
-    {# FOLLOWING LIST – collapses when you click "Following N" (own mentee profile only) #}
-    {% if not is_mentor and user.profile == profile_obj %}
-        <div class="collapse mb-3" id="followingCollapse">
-            <div class="card">
-                <div class="card-body">
-                    <h5 class="card-title mb-3">Mentors you follow</h5>
-
-                    {% if followed_mentors %}
-                        <ul class="list-unstyled mb-0">
-                            {% for f in followed_mentors %}
-                                <li class="d-flex justify-content-between align-items-center mb-2">
-                                    <a href="{% url 'mentor_detail' f.mentor.id %}">
-                                        {{ f.mentor.user.username }}
-                                    </a>
-                                    <form method="post"
-                                          action="{% url 'toggle_follow' f.mentor.id %}"
-                                          class="ms-2">
-                                        {% csrf_token %}
-                                        <button type="submit"
-                                                class="btn btn-sm btn-outline-secondary">
-                                            Unfollow
-                                        </button>
-                                    </form>
-                                </li>
-                            {% endfor %}
-                        </ul>
-                    {% else %}
-                        <p class="text-muted mb-0">
-                            You're not following any mentors yet.
-                        </p>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-    {% endif %}
-
-    {% if is_mentor %}
-        <!-- AVAILABILITY (MENTORS ONLY) -->
-        <div class="card mb-3">
+    {# FOLLOWING LIST – collapses when you click "Following N" (only own mentee profile) #}
+    {% if not is_mentor and user.is_authenticated and user.profile == profile_obj %}
+    <div class="collapse mb-3" id="followingCollapse">
+        <div class="card">
             <div class="card-body">
-                <h5 class="card-title">Availability</h5>
+                <h5 class="card-title mb-3">Mentors you follow</h5>
 
-                {% if availabilities %}
+                {% if followed_mentors %}
                     <ul class="list-unstyled mb-0">
-                        {% for a in availabilities %}
-                            <li class="mb-1">
-                                <strong>{{ a.get_day_of_week_display }}:</strong>
-                                {{ a.start_time|time:"g:i a" }} – {{ a.end_time|time:"g:i a" }}
+                        {% for f in followed_mentors %}
+                            <li class="d-flex justify-content-between align-items-center mb-2">
+                                <a href="{% url 'mentor_detail' f.mentor.id %}">
+                                    {{ f.mentor.user.username }}
+                                </a>
+                                <form method="post"
+                                      action="{% url 'toggle_follow' f.mentor.id %}"
+                                      class="ms-2">
+                                    {% csrf_token %}
+                                    <button type="submit"
+                                            class="btn btn-sm btn-outline-secondary">
+                                        Unfollow
+                                    </button>
+                                </form>
                             </li>
                         {% endfor %}
                     </ul>
-                    <p class="text-muted mt-2 mb-0">
-                        To update your availability, go to
-                        <a href="{% url 'edit_availability' %}">My Availability</a>.
-                    </p>
                 {% else %}
                     <p class="text-muted mb-0">
-                        You haven’t added any availability yet.
-                        Set it on the <a href="{% url 'edit_availability' %}">My Availability</a> page.
+                        You're not following any mentors yet.
                     </p>
                 {% endif %}
             </div>
         </div>
+    </div>
     {% endif %}
 
-    {# POSTS (MENTORS ONLY) #}
+    {% if is_mentor %}
+    <!-- AVAILABILITY (MENTORS ONLY) -->
+    <div class="card mb-3">
+        <div class="card-body">
+            <h5 class="card-title">Availability</h5>
+
+            {% if availabilities %}
+                <ul class="list-unstyled mb-0">
+                    {% for a in availabilities %}
+                        <li class="mb-1">
+                            <strong>{{ a.get_day_of_week_display }}:</strong>
+                            {{ a.start_time|time:"g:i a" }} – {{ a.end_time|time:"g:i a" }}
+                        </li>
+                    {% endfor %}
+                </ul>
+                <p class="text-muted mt-2 mb-0">
+                    To update your availability, go to
+                    <a href="{% url 'edit_availability' %}">My Availability</a>.
+                </p>
+            {% else %}
+                <p class="text-muted mb-0">
+                    You haven’t added any availability yet.
+                    Set it on the <a href="{% url 'edit_availability' %}">My Availability</a> page.
+                </p>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- POSTS (MENTORS ONLY) -->
     {% if is_mentor %}
         <div class="card mb-4">
             <div class="card-body">
