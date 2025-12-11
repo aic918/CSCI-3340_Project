@@ -178,18 +178,26 @@ def dashboard(request):
 
     profile, created = Profile.objects.get_or_create(
         user=user,
-        defaults={"role": "MENTEE"}
+        defaults={"role": "MENTEE"},
     )
 
     if created or profile.role not in ["MENTOR", "MENTEE"]:
         return redirect("select_role")
 
+    # MENTOR DASHBOARD
     if profile.role == "MENTOR":
-        sessions = Session.objects.filter(mentor=profile)
+        sessions = Session.objects.filter(mentor=profile).order_by("scheduled_at")
         total_sessions = sessions.count()
         completed = sessions.filter(status="COMPLETED").count()
         pending = sessions.filter(status="PENDING").count()
-        avg_rating = Review.objects.filter(session__mentor=profile).aggregate(Avg("rating"))["rating__avg"]
+        avg_rating = (
+            Review.objects.filter(session__mentor=profile)
+                          .aggregate(Avg("rating"))["rating__avg"]
+        )
+
+        upcoming_sessions = sessions.filter(
+            status__in=["PENDING", "CONFIRMED"]
+        )
 
         context = {
             "profile": profile,
@@ -198,34 +206,39 @@ def dashboard(request):
             "completed": completed,
             "pending": pending,
             "avg_rating": avg_rating,
+            "upcoming_sessions": upcoming_sessions,
         }
+
+    # MENTEE DASHBOARD
     else:
-        sessions = Session.objects.filter(mentee=profile)
-        total_sessions = sessions.count()
-        completed = sessions.filter(status="COMPLETED").count()
-        pending = sessions.filter(status="PENDING").count()
+        sessions = Session.objects.filter(mentee=profile).order_by("scheduled_at")
+        upcoming_sessions = sessions.filter(
+            status__in=["PENDING", "CONFIRMED"]
+        )
 
         context = {
             "profile": profile,
             "is_mentor": False,
-            "total_sessions": total_sessions,
-            "completed": completed,
-            "pending": pending,
+            "upcoming_sessions": upcoming_sessions,
         }
 
     return render(request, "core/dashboard.html", context)
-
 
 @login_required
 def my_sessions(request):
     profile = request.user.profile
 
     if profile.role == "MENTOR":
-        # Mentors can see all sessions (including cancelled) for history
-        sessions = Session.objects.filter(mentor=profile).order_by("scheduled_at")
+        # Hide cancelled sessions for mentors
+        sessions = (
+            Session.objects
+            .filter(mentor=profile)
+            .exclude(status="CANCELLED")
+            .order_by("scheduled_at")
+        )
         role_label = "Sessions where you are the mentor"
+
     else:  # MENTEE
-        # Mentees only see non-cancelled sessions
         sessions = (
             Session.objects
             .filter(mentee=profile)

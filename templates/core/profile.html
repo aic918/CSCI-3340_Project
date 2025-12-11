@@ -153,8 +153,8 @@
         </div>
     {% endif %}
 
-    {% if is_mentor %}
     <!-- AVAILABILITY -->
+    {% if is_mentor %}
     <div class="card mb-3">
         <div class="card-body">
             <h5 class="card-title">Availability</h5>
@@ -168,16 +168,32 @@
                         </li>
                     {% endfor %}
                 </ul>
-                <p class="text-muted mt-2">To update availability, go to <a href="{% url 'edit_availability' %}">My Availability</a>.</p>
+
+                {# Only show link if viewing YOUR OWN mentor profile #}
+                {% if user.is_authenticated and user.profile == profile_obj %}
+                    <p class="text-muted mt-2 mb-0">
+                        To update availability, go to
+                        <a href="{% url 'edit_availability' %}">My Availability</a>.
+                    </p>
+                {% endif %}
+
             {% else %}
-                <p class="text-muted mb-0">
-                    No availability added yet.  
-                    <a href="{% url 'edit_availability' %}">Set availability</a>
-                </p>
+                {# Mentor has no availability — only show setup link to THEM, not mentees #}
+                {% if user.is_authenticated and user.profile == profile_obj %}
+                    <p class="text-muted mb-0">
+                        You haven’t added any availability yet.
+                        Set it on the <a href="{% url 'edit_availability' %}">My Availability</a> page.
+                    </p>
+                {% else %}
+                    <p class="text-muted mb-0">
+                        This mentor has not shared availability yet.
+                    </p>
+                {% endif %}
             {% endif %}
         </div>
     </div>
-    {% endif %}
+{% endif %}
+
 
     <!-- POSTS -->
     {% if is_mentor %}
