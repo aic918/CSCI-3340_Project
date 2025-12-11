@@ -1,0 +1,252 @@
+/* ============================================================= */
+/*                     GLOBAL BACKGROUND + BODY                  */
+/* ============================================================= */
+
+.mentora-body {
+    min-height: 100vh;
+    margin: 0;
+    background:
+        radial-gradient(circle at top left, #b38cff 0, transparent 50%),
+        radial-gradient(circle at bottom right, #ffb6ff 0, transparent 55%),
+        radial-gradient(circle at top right, #7b2cff 0, transparent 45%),
+        #050415;
+    color: #f5f0ff;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text",
+                 "Segoe UI", sans-serif;
+}
+
+/* main content sits cleanly over background */
+.mentora-main {
+    color: #f5f0ff;
+}
+
+
+/* ============================================================= */
+/*                             NAVBAR                            */
+/* ============================================================= */
+
+.mentora-nav {
+    background: linear-gradient(90deg, #2b1b5f, #5b2aa8, #3c1642);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.mentora-brand {
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    font-size: 1rem;
+    color: #fdfbff !important;
+}
+
+.mentora-nav .nav-link {
+    color: #e7dbff !important;
+    font-size: 0.95rem;
+    opacity: 0.8;
+    transition: opacity 0.2s ease, transform 0.15s ease;
+}
+
+.mentora-nav .nav-link:hover,
+.mentora-nav .nav-link:focus {
+    opacity: 1;
+    transform: translateY(-1px);
+}
+
+.mentora-user-label {
+    color: #f0e7ff;
+}
+
+.mentora-toggler {
+    border-color: rgba(255, 255, 255, 0.4);
+}
+.mentora-toggler .navbar-toggler-icon {
+    filter: invert(1) brightness(1.5);
+}
+
+
+/* ============================================================= */
+/*                             BUTTONS                           */
+/* ============================================================= */
+
+.mentora-btn-primary {
+    border-radius: 999px;
+    background: linear-gradient(135deg, #a855f7, #6366f1);
+    border: none;
+    color: #fff !important;
+    padding-inline: 1.1rem;
+    box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
+    transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+}
+
+.mentora-btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 30px rgba(99, 102, 241, 0.6);
+    opacity: 0.95;
+}
+
+.mentora-btn-ghost {
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    background: rgba(15, 15, 35, 0.7);
+    color: #fdfbff !important;
+    padding-inline: 1.1rem;
+    transition: background 0.15s ease, transform 0.15s ease, border-color 0.15s ease;
+}
+
+.mentora-btn-ghost:hover {
+    background: rgba(255, 255, 255, 0.06);
+    transform: translateY(-1px);
+    border-color: rgba(255, 255, 255, 0.6);
+}
+
+
+/* ============================================================= */
+/*                               CARDS                           */
+/* ============================================================= */
+
+.card {
+    background: rgba(10, 9, 30, 0.92);
+    border-radius: 1.2rem;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    box-shadow: 0 20px 45px rgba(0, 0, 0, 0.6),
+                0 0 0 1px rgba(255, 255, 255, 0.01);
+    backdrop-filter: blur(16px);
+    color: #f5f0ff;
+}
+
+.card-title {
+    color: #fdfbff;
+    font-weight: 600;
+}
+
+
+/* ============================================================= */
+/*                         FORM ELEMENTS                         */
+/* ============================================================= */
+
+.form-control,
+.form-select {
+    background-color: rgba(15, 14, 40, 0.9);
+    border-color: rgba(255, 255, 255, 0.12);
+    color: #f5f0ff;
+}
+
+.form-control:focus,
+.form-select:focus {
+    background-color: rgba(15, 14, 40, 0.95);
+    border-color: #a855f7;
+    box-shadow: 0 0 0 0.2rem rgba(168, 85, 247, 0.35);
+    color: #f5f0ff;
+}
+
+
+/* ============================================================= */
+/*                         TEXT + LINKS                          */
+/* ============================================================= */
+
+.text-muted {
+    color: rgba(228, 215, 255, 0.7) !important;
+}
+
+a {
+    color: #c77dff;
+    text-decoration: none;
+}
+a:hover {
+    color: #f4bfff;
+    text-decoration: underline;
+}
+
+
+/* ============================================================= */
+/*                         LIST GROUP                            */
+/* ============================================================= */
+
+.list-group-item {
+    background-color: rgba(12, 11, 35, 0.95);
+    border-color: rgba(255, 255, 255, 0.05);
+    color: #f5f0ff;
+}
+
+
+/* =================================================================== */
+/*                 MY SESSIONS — GLASS PANEL + TABLE                   */
+/* =================================================================== */
+
+/* Wrapper panel behind table */
+.mentora-panel {
+    background: rgba(10, 8, 30, 0.88);
+    border-radius: 18px;
+    padding: 24px 24px 20px;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(22px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    margin-bottom: 2rem;
+}
+
+/* TABLE HEADER */
+.mentora-table thead th {
+    font-weight: 600;
+    color: #ffffff;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    background: rgba(255, 255, 255, 0.06);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+    padding-top: 14px;
+    padding-bottom: 14px;
+}
+
+/* TABLE BODY */
+.mentora-table tbody td {
+    color: #ffffff !important;
+    font-weight: 500;
+    font-size: 1rem;
+    padding: 14px 10px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.mentora-table tbody tr:hover {
+    background: rgba(255, 255, 255, 0.12) !important;
+    transition: background 0.2s ease;
+}
+
+
+/* BADGES */
+.badge.bg-success-subtle {
+    background-color: rgba(52, 199, 89, 0.18) !important;
+    color: #4cd964 !important;
+}
+
+.badge.bg-warning-subtle {
+    background-color: rgba(255, 204, 0, 0.18) !important;
+    color: #ffd60a !important;
+}
+
+.badge.bg-danger-subtle {
+    background-color: rgba(255, 69, 58, 0.18) !important;
+    color: #ff6b6b !important;
+}
+
+.badge.bg-secondary-subtle {
+    background-color: rgba(142, 142, 147, 0.18) !important;
+    color: #d1d1d6 !important;
+}
+
+
+/* ============================================================= */
+/*           OVERRIDES TO FIX INVISIBLE TEXT IN TABLES           */
+/* ============================================================= */
+
+/* Boost text visibility for bootstrap table rows */
+.table tbody td {
+    color: #ffffff !important;
+}
+
+.table tbody tr {
+    background: rgba(20, 18, 38, 0.85);
+}
+
+.table thead th {
+    color: #ffffff;
+}

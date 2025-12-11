@@ -1,33 +1,54 @@
-{% load static %}
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8">
-    <title>Mentora</title>
-    <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-  </head>
-  <body class="bg-light">
+{% extends "base.html" %}
 
-    <div class="container text-center py-5">
-      <h1 class="display-4 fw-bold text-primary">Welcome to Mentora</h1>
-      <p class="lead">Connect with mentors and grow your skills 🚀</p>
-      {% if user.is_authenticated %}
-      <!-- Logged-in users go to their dashboard -->
-      <a href="{% url 'dashboard' %}" class="btn btn-success btn-lg mt-3">
-        Get Started
-      </a>
-    {% else %}
-      <!-- Logged-out users go choose Mentor or Mentee -->
-      <a href="{% url 'select_role' %}" class="btn btn-success btn-lg mt-3">
-        Get Started
-      </a>
-    {% endif %}
+{% block content %}
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-lg-8">
+
+      <!-- HERO CARD -->
+      <section class="card mentora-hero border-0 p-4 p-md-5 text-center">
+        <div class="hero-badge mb-3">
+          <span class="dot"></span>
+          Future-ready mentorship platform
+        </div>
+
+        <h1 class="display-5 fw-bold mb-3 gradient-text">
+          Welcome to Mentora
+        </h1>
+
+        <p class="lead text-muted mb-4">
+          Connect with mentors, grow your skills, and level up your future —
+          one focused session at a time.
+        </p>
+
+        <div class="d-flex justify-content-center flex-wrap gap-3">
+          {% if user.is_authenticated %}
+            <!-- Logged in: go straight to dashboard -->
+            <a href="{% url 'dashboard' %}"
+               class="btn mentora-btn-primary btn-lg">
+              Open my dashboard
+            </a>
+          {% else %}
+            <!-- Not logged in: sign up / log in -->
+            <a href="{% url 'select_role' %}"
+               class="btn mentora-btn-primary btn-lg">
+              Get started
+            </a>
+            <a href="{% url 'login' %}"
+               class="btn mentora-btn-ghost btn-lg">
+              I already have an account
+            </a>
+          {% endif %}
+        </div>
+
+        <div class="mt-4 d-flex justify-content-center small text-muted gap-3 flex-wrap">
+          <span>✨ 1-on-1 guidance</span>
+          <span>🧠 Real-world skills</span>
+          <span>🚀 Built for students</span>
+        </div>
+      </section>
 
     </div>
-    
-
-    <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-  </body>
-</html>
+  </div>
+</div>
+{% endblock %}

@@ -1,18 +1,44 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="container text-center mt-5">
-    <h1 class="mb-4">Join Mentora</h1>
-    <p class="lead">Choose how you want to sign up</p>
+<div class="container mt-5" style="max-width: 600px;">
 
-    <div class="d-flex justify-content-center gap-4 mt-4">
-        <a href="{% url 'signup' %}?role=MENTOR" class="btn btn-primary btn-lg">
-            Sign up as Mentor
-        </a>
+  <h1 class="mb-3 text-center">Join Mentora</h1>
+  <p class="text-muted mb-4 text-center">
+    Choose how you want to sign up
+  </p>
 
-        <a href="{% url 'signup' %}?role=MENTEE" class="btn btn-success btn-lg">
-            Sign up as Mentee
-        </a>
+  <!-- LOGIN CARD ABOVE SIGN-UP BUTTONS -->
+  <div class="card mb-4">
+    <div class="card-body d-flex justify-content-between align-items-center">
+      <div>
+        <h5 class="card-title mb-1">Already have an account?</h5>
+        <p class="card-text small mb-0">
+          Log in to continue where you left off.
+        </p>
+      </div>
+      <a href="{% url 'login' %}" class="btn btn-outline-primary">
+        Log in
+      </a>
     </div>
+  </div>
+
+  <!-- SIGN UP BUTTONS -->
+  <div class="d-flex justify-content-center gap-3">
+    <!-- Sign up as Mentor -->
+    <a href="{% url 'signup' %}?role=MENTOR"
+       class="btn btn-primary"
+       style="padding: 12px 26px; font-size: 1.1rem;">
+      Sign up as Mentor
+    </a>
+
+    <!-- Sign up as Mentee -->
+    <a href="{% url 'signup' %}?role=MENTEE"
+       class="btn btn-success"
+       style="padding: 12px 26px; font-size: 1.1rem;">
+      Sign up as Mentee
+    </a>
+  </div>
+
 </div>
 {% endblock %}
