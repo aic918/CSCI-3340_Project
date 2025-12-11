@@ -42,7 +42,7 @@
                 Request a Session
             </a>
 
-            {# NEW: Message button -> opens DM thread with this mentor #}
+            {# Message button -> DM thread with this mentor #}
             <a href="{% url 'conversation' mentor.id %}"
                class="btn btn-outline-secondary">
                 Message
@@ -52,6 +52,7 @@
             <form method="post"
                   action="{% url 'toggle_follow' mentor.id %}">
                 {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.path }}">
                 {% if is_following %}
                     <button type="submit" class="btn btn-outline-secondary">
                         Unfollow

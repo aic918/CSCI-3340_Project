@@ -2,6 +2,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login
 from django.contrib.auth.forms import UserCreationForm
+from django.urls import reverse
 from .models import Profile, Session, Review, Availability, Message, Connection, Post, PostLike, PostComment, Follow
 from django.contrib.auth import logout
 from django.contrib.auth.decorators import login_required
@@ -241,13 +242,9 @@ def my_sessions(request):
 
 @login_required
 def profile_view(request):
-    """
-    Show a LinkedIn/Instagram-style profile page for the currently logged-in user.
-    """
     profile = request.user.profile
     is_mentor = (profile.role == "MENTOR")
 
-    # Stats
     if is_mentor:
         sessions_as_mentor = Session.objects.filter(mentor=profile)
         total_sessions = sessions_as_mentor.count()
@@ -258,9 +255,6 @@ def profile_view(request):
             .filter(session__mentor=profile)
             .aggregate(Avg("rating"))["rating__avg"]
         )
-        # mentors don't follow anyone for now
-        followed_mentors = []
-        follow_count = 0
     else:
         sessions_as_mentee = Session.objects.filter(mentee=profile)
         total_sessions = sessions_as_mentee.count()
@@ -268,16 +262,6 @@ def profile_view(request):
         pending = sessions_as_mentee.filter(status="PENDING").count()
         avg_rating = None
 
-        # mentee: who am I following?
-        followed_mentors = (
-            Follow.objects
-            .filter(follower=profile)
-            .select_related("mentor__user")
-            .order_by("mentor__user__username")
-        )
-        follow_count = followed_mentors.count()
-
-    # Availability – only mentors publish availability
     if is_mentor:
         availabilities = (
             Availability.objects
@@ -287,8 +271,20 @@ def profile_view(request):
     else:
         availabilities = []
 
-    # Posts – only mentors will actually have any, but showing for consistency
     posts = Post.objects.filter(author=profile).order_by("-created_at")
+
+    # mentee: list of mentors they follow (for "Following N" section)
+    if not is_mentor:
+        followed_mentors = (
+            Follow.objects
+            .filter(follower=profile)
+            .select_related("mentor__user")
+            .order_by("mentor__user__username")
+        )
+        follow_count = followed_mentors.count()
+    else:
+        followed_mentors = []
+        follow_count = 0
 
     context = {
         "profile_obj": profile,
@@ -299,10 +295,10 @@ def profile_view(request):
         "avg_rating": avg_rating,
         "availabilities": availabilities,
         "posts": posts,
-
-        # NEW for mentee “following” UI
         "followed_mentors": followed_mentors,
         "follow_count": follow_count,
+        # viewing own profile, so no is_following needed
+        "is_following": False,
     }
     return render(request, "core/profile.html", context)
 
@@ -433,8 +429,8 @@ def edit_availability(request):
 def inbox(request):
     profile = request.user.profile
 
-    # All messages involving this profile
-    msgs = (
+    # --- 1) All messages involving this profile, newest first ---
+    all_msgs = (
         Message.objects.filter(
             Q(sender=profile) | Q(recipient=profile)
         )
@@ -442,7 +438,24 @@ def inbox(request):
         .order_by("-sent_at")
     )
 
-    # Contacts you can start a conversation with
+    # --- 2) Build one "thread" per conversation partner ---
+    threads = []
+    seen_partner_ids = set()
+
+    for msg in all_msgs:
+        # Who is the other person in this message?
+        other = msg.recipient if msg.sender == profile else msg.sender
+
+        # If we already created a thread for this person, skip
+        if other.id in seen_partner_ids:
+            continue
+
+        seen_partner_ids.add(other.id)
+        # Attach convenience attribute so the template can use it
+        msg.other = other
+        threads.append(msg)
+
+    # --- 3) Contacts you can start a conversation with (unchanged) ---
     if profile.role == "MENTEE":
         # mentee -> mentors they follow
         contacts = (
@@ -468,7 +481,7 @@ def inbox(request):
         request,
         "core/inbox.html",
         {
-            "messages": msgs,
+            "threads": threads,   # <- use threads instead of raw messages
             "contacts": contacts,
         },
     )
@@ -775,29 +788,40 @@ def unfollow_mentor(request, mentor_id):
     return redirect("mentor_detail", mentor_id=mentor.id)
 
 @login_required
+@require_POST
 def toggle_follow(request, mentor_id):
     """
     Mentee follows / unfollows a mentor.
+    - If a Follow exists -> delete it (unfollow)
+    - If not -> create it (follow)
+    Then redirect back to `next` or referer.
     """
-    profile = request.user.profile
-    mentor = get_object_or_404(Profile, id=mentor_id, role="MENTOR")
+    me = request.user.profile
 
     # Only mentees can follow mentors
-    if profile.role != "MENTEE":
-        return redirect("mentor_detail", mentor_id=mentor.id)
+    if me.role != "MENTEE":
+        return redirect("dashboard")
 
-    if request.method == "POST":
-        qs = Follow.objects.filter(follower=profile, mentor=mentor)
+    mentor = get_object_or_404(Profile, id=mentor_id, role="MENTOR")
 
-        if qs.exists():
-            # Already following -> unfollow (delete ALL rows just in case)
-            qs.delete()
-        else:
-            # Not following -> follow
-            Follow.objects.create(follower=profile, mentor=mentor)
+    # Try to get an existing follow
+    follow, created = Follow.objects.get_or_create(
+        follower=me,
+        mentor=mentor,
+    )
 
-    return redirect("mentor_detail", mentor_id=mentor.id)
+    if not created:
+        # it already existed -> UNFOLLOW
+        follow.delete()
+    # else: it was just created -> FOLLOW
 
+    # Figure out where to go back
+    next_url = (
+        request.POST.get("next")
+        or request.META.get("HTTP_REFERER")
+        or reverse("mentor_detail", args=[mentor.id])
+    )
+    return redirect(next_url)
 
 @login_required
 def my_follows(request):
@@ -831,15 +855,10 @@ def my_follows(request):
 
 @login_required
 def profile_public(request, profile_id):
-    """
-    View another user's profile (from posts, comments, etc.).
-    Uses the same layout as your own profile, but hides 'Edit profile'
-    and the following list when it's not you.
-    """
     profile_obj = get_object_or_404(Profile, id=profile_id)
     is_mentor = (profile_obj.role == "MENTOR")
 
-    # Stats
+    # --- stats (unchanged) ---
     if is_mentor:
         sessions_as_mentor = Session.objects.filter(mentor=profile_obj)
         total_sessions = sessions_as_mentor.count()
@@ -857,7 +876,7 @@ def profile_public(request, profile_id):
         pending = sessions_as_mentee.filter(status="PENDING").count()
         avg_rating = None
 
-    # Availability – only mentors publish availability
+    # Availability
     if is_mentor:
         availabilities = (
             Availability.objects
@@ -867,11 +886,20 @@ def profile_public(request, profile_id):
     else:
         availabilities = []
 
-    # Posts by that user
     posts = Post.objects.filter(author=profile_obj).order_by("-created_at")
 
-    # Following list is only meaningful when you are viewing your own mentee profile
-    if (not is_mentor) and (request.user.profile == profile_obj):
+    # Is the logged-in user following this mentor?
+    me = request.user.profile
+    if me.role == "MENTEE" and profile_obj.role == "MENTOR":
+        is_following = Follow.objects.filter(
+            follower=me,
+            mentor=profile_obj
+        ).exists()
+    else:
+        is_following = False
+
+    # Following list for own mentee profile
+    if (not is_mentor) and (me == profile_obj):
         followed_mentors = (
             Follow.objects
             .filter(follower=profile_obj)
@@ -883,16 +911,20 @@ def profile_public(request, profile_id):
         followed_mentors = []
         follow_count = 0
 
-    context = {
-        "profile_obj": profile_obj,
-        "is_mentor": is_mentor,
-        "total_sessions": total_sessions,
-        "completed": completed,
-        "pending": pending,
-        "avg_rating": avg_rating,
-        "availabilities": availabilities,
-        "posts": posts,
-        "followed_mentors": followed_mentors,
-        "follow_count": follow_count,
-    }
-    return render(request, "core/profile.html", context)
+    return render(
+        request,
+        "core/profile.html",
+        {
+            "profile_obj": profile_obj,
+            "is_mentor": is_mentor,
+            "total_sessions": total_sessions,
+            "completed": completed,
+            "pending": pending,
+            "avg_rating": avg_rating,
+            "availabilities": availabilities,
+            "posts": posts,
+            "followed_mentors": followed_mentors,
+            "follow_count": follow_count,
+            "is_following": is_following,
+        },
+    )

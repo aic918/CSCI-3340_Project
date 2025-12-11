@@ -7,7 +7,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("core", "0007_profile_public_id"),
+        ("core", "0001_initial"),
     ]
 
     operations = [

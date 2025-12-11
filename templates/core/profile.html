@@ -6,7 +6,8 @@
     <!-- HEADER CARD -->
     <div class="card mb-4">
         <div class="card-body text-center">
-            <!-- Photo / Placeholder -->
+
+            <!-- PHOTO -->
             <div class="mb-3">
                 {% if profile_obj.photo %}
                     <img src="{{ profile_obj.photo.url }}"
@@ -19,7 +20,10 @@
                 {% endif %}
             </div>
 
+            <!-- USERNAME -->
             <h3 class="mb-0">{{ profile_obj.user.username }}</h3>
+
+            <!-- ROLE -->
             <p class="text-muted mb-1">
                 {% if profile_obj.role == "MENTOR" %}
                     Mentor
@@ -28,65 +32,80 @@
                 {% endif %}
             </p>
 
-            {# PUBLIC ID WITH COPY BUTTON #}
+            <!-- PUBLIC ID -->
             {% if profile_obj.public_id %}
                 <p class="small text-muted mb-2">
-                    ID:
-                    <span id="public-id-text">{{ profile_obj.public_id }}</span>
-                    <button
-                        type="button"
-                        class="btn btn-sm btn-outline-secondary ms-2"
-                        onclick="navigator.clipboard.writeText('{{ profile_obj.public_id }}'); alert('ID copied to clipboard');"
-                    >
+                    ID: <span id="public-id-text">{{ profile_obj.public_id }}</span>
+                    <button type="button"
+                            class="btn btn-sm btn-outline-secondary ms-2"
+                            onclick="navigator.clipboard.writeText('{{ profile_obj.public_id }}'); alert('ID copied');">
                         Copy ID
                     </button>
                 </p>
             {% endif %}
 
+            <!-- SKILLS -->
             {% if profile_obj.skills %}
                 <p class="mb-1">
                     {% if profile_obj.role == "MENTOR" %}
-                        <strong>Skills you can help with:</strong> {{ profile_obj.skills }}
+                        <strong>Skills you can help with:</strong>
                     {% else %}
-                        <strong>Topics of interest:</strong> {{ profile_obj.skills }}
+                        <strong>Topics of interest:</strong>
                     {% endif %}
+                    {{ profile_obj.skills }}
                 </p>
             {% endif %}
 
+            <!-- RATE -->
             {% if profile_obj.role == "MENTOR" and profile_obj.hourly_rate %}
-                <p class="mb-2">
-                    <strong>Rate:</strong> ${{ profile_obj.hourly_rate }} / hour
-                </p>
+                <p class="mb-2"><strong>Rate:</strong> ${{ profile_obj.hourly_rate }} / hour</p>
             {% endif %}
 
-            {# INSTAGRAM-STYLE FOLLOWING COUNT (MENTEES ONLY, OWN PROFILE) #}
-            {% if not is_mentor and user.is_authenticated and user.profile == profile_obj %}
+            <!-- FOLLOWING COUNT ON OWN PROFILE -->
+            {% if user.is_authenticated and user.profile == profile_obj and user.profile.role == "MENTEE" %}
                 <p class="mb-2">
                     <button class="btn btn-link p-0"
-                            type="button"
                             data-bs-toggle="collapse"
-                            data-bs-target="#followingCollapse"
-                            aria-expanded="false"
-                            aria-controls="followingCollapse">
+                            data-bs-target="#followingCollapse">
                         <strong>Following</strong> {{ follow_count }}
                     </button>
                 </p>
             {% endif %}
 
-            <div class="mt-2">
-                {# If this is *your* profile -> Edit button #}
+            <!-- ACTION BUTTONS -->
+            <div class="mt-2 d-flex justify-content-center gap-2">
+
                 {% if user.is_authenticated and user.profile == profile_obj %}
-                    <a href="{% url 'edit_profile' %}"
-                       class="btn btn-outline-primary btn-sm">
-                        Edit profile
-                    </a>
+                    <!-- SELF PROFILE -->
+                    <a href="{% url 'edit_profile' %}" class="btn btn-outline-primary btn-sm">Edit Profile</a>
+
                 {% else %}
-                    {# Viewing someone else's profile -> Message button #}
+                    <!-- SEND MESSAGE -->
                     <a href="{% url 'conversation' profile_obj.id %}"
                        class="btn btn-outline-secondary btn-sm">
                         Message
                     </a>
+
+                    {% if user.is_authenticated and user.profile.role == "MENTEE" and profile_obj.role == "MENTOR" %}
+                        <!-- FOLLOW / UNFOLLOW BUTTON -->
+                        <form method="post" action="{% url 'toggle_follow' profile_obj.id %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="next" value="{{ request.path }}">
+                            {% if is_following %}
+                                <button type="submit" class="btn btn-outline-secondary btn-sm">Unfollow</button>
+                            {% else %}
+                                <button type="submit" class="btn btn-outline-primary btn-sm">Follow</button>
+                            {% endif %}
+                        </form>
+
+                        <!-- REQUEST SESSION BUTTON -->
+                        <a href="{% url 'request_session' profile_obj.id %}"
+                           class="btn btn-success btn-sm">
+                            Request Session
+                        </a>
+                    {% endif %}
                 {% endif %}
+
             </div>
         </div>
     </div>
@@ -96,51 +115,46 @@
         <div class="card-body">
             <h5 class="card-title">About</h5>
             {% if profile_obj.bio %}
-                <p class="card-text">{{ profile_obj.bio }}</p>
+                <p>{{ profile_obj.bio }}</p>
             {% else %}
                 <p class="text-muted mb-0">No bio yet.</p>
             {% endif %}
         </div>
     </div>
 
-    {# FOLLOWING LIST – collapses when you click "Following N" (only own mentee profile) #}
-    {% if not is_mentor and user.is_authenticated and user.profile == profile_obj %}
-    <div class="collapse mb-3" id="followingCollapse">
-        <div class="card">
-            <div class="card-body">
-                <h5 class="card-title mb-3">Mentors you follow</h5>
+    <!-- FOLLOWING LIST (ONLY FOR OWN MENTEE PROFILE) -->
+    {% if user.is_authenticated and user.profile == profile_obj and user.profile.role == "MENTEE" %}
+        <div class="collapse mb-3" id="followingCollapse">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title mb-3">Mentors you follow</h5>
 
-                {% if followed_mentors %}
-                    <ul class="list-unstyled mb-0">
-                        {% for f in followed_mentors %}
-                            <li class="d-flex justify-content-between align-items-center mb-2">
-                                <a href="{% url 'mentor_detail' f.mentor.id %}">
-                                    {{ f.mentor.user.username }}
-                                </a>
-                                <form method="post"
-                                      action="{% url 'toggle_follow' f.mentor.id %}"
-                                      class="ms-2">
-                                    {% csrf_token %}
-                                    <button type="submit"
-                                            class="btn btn-sm btn-outline-secondary">
-                                        Unfollow
-                                    </button>
-                                </form>
-                            </li>
-                        {% endfor %}
-                    </ul>
-                {% else %}
-                    <p class="text-muted mb-0">
-                        You're not following any mentors yet.
-                    </p>
-                {% endif %}
+                    {% if followed_mentors %}
+                        <ul class="list-unstyled mb-0">
+                            {% for f in followed_mentors %}
+                                <li class="d-flex justify-content-between align-items-center mb-2">
+                                    <a href="{% url 'mentor_detail' f.mentor.id %}">
+                                        {{ f.mentor.user.username }}
+                                    </a>
+
+                                    <form method="post" action="{% url 'toggle_follow' f.mentor.id %}">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="next" value="{{ request.path }}">
+                                        <button class="btn btn-sm btn-outline-secondary">Unfollow</button>
+                                    </form>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p class="text-muted">You are not following any mentors.</p>
+                    {% endif %}
+                </div>
             </div>
         </div>
-    </div>
     {% endif %}
 
     {% if is_mentor %}
-    <!-- AVAILABILITY (MENTORS ONLY) -->
+    <!-- AVAILABILITY -->
     <div class="card mb-3">
         <div class="card-body">
             <h5 class="card-title">Availability</h5>
@@ -148,27 +162,24 @@
             {% if availabilities %}
                 <ul class="list-unstyled mb-0">
                     {% for a in availabilities %}
-                        <li class="mb-1">
+                        <li>
                             <strong>{{ a.get_day_of_week_display }}:</strong>
                             {{ a.start_time|time:"g:i a" }} – {{ a.end_time|time:"g:i a" }}
                         </li>
                     {% endfor %}
                 </ul>
-                <p class="text-muted mt-2 mb-0">
-                    To update your availability, go to
-                    <a href="{% url 'edit_availability' %}">My Availability</a>.
-                </p>
+                <p class="text-muted mt-2">To update availability, go to <a href="{% url 'edit_availability' %}">My Availability</a>.</p>
             {% else %}
                 <p class="text-muted mb-0">
-                    You haven’t added any availability yet.
-                    Set it on the <a href="{% url 'edit_availability' %}">My Availability</a> page.
+                    No availability added yet.  
+                    <a href="{% url 'edit_availability' %}">Set availability</a>
                 </p>
             {% endif %}
         </div>
     </div>
     {% endif %}
 
-    <!-- POSTS (MENTORS ONLY) -->
+    <!-- POSTS -->
     {% if is_mentor %}
         <div class="card mb-4">
             <div class="card-body">
@@ -178,43 +189,33 @@
                     {% for post in posts %}
                         <div class="border rounded p-3 mb-3">
                             <div class="d-flex justify-content-between mb-2">
-                                <small class="text-muted">
-                                    {{ post.created_at|date:"M d, Y, g:i a" }}
-                                </small>
+                                <small class="text-muted">{{ post.created_at|date:"M d, Y, g:i a" }}</small>
 
                                 {% if user.profile == profile_obj %}
-                                    <a href="{% url 'edit_post' post.id %}"
-                                       class="btn btn-sm btn-outline-secondary">
-                                        Edit
-                                    </a>
+                                    <a href="{% url 'edit_post' post.id %}" class="btn btn-sm btn-outline-secondary">Edit</a>
                                 {% endif %}
                             </div>
 
-                            <p class="mb-2">{{ post.content }}</p>
+                            <p>{{ post.content }}</p>
 
                             {% if post.image %}
-                                <img src="{{ post.image.url }}"
-                                     alt="Post image"
-                                     class="img-fluid rounded mb-1"
+                                <img src="{{ post.image.url }}" class="img-fluid rounded mb-1"
                                      style="max-height: 250px; object-fit: cover;">
                             {% endif %}
 
-                            <div class="mt-1 small text-muted">
-                                {{ post.likes.count }} like{% if post.likes.count != 1 %}s{% endif %}
+                            <div class="small text-muted">
+                                {{ post.likes.count }} like{{ post.likes.count|pluralize }}
                                 •
-                                {{ post.comments.count }} comment{% if post.comments.count != 1 %}s{% endif %}
+                                {{ post.comments.count }} comment{{ post.comments.count|pluralize }}
                             </div>
                         </div>
                     {% endfor %}
                 {% else %}
-                    <p class="text-muted mb-0">
-                        You haven’t posted anything yet.
-                        Share something on the
-                        <a href="{% url 'feed' %}">Mentor Feed</a>.
-                    </p>
+                    <p class="text-muted">No posts yet.</p>
                 {% endif %}
             </div>
         </div>
     {% endif %}
+
 </div>
 {% endblock %}

@@ -46,28 +46,19 @@
     </div>
   {% endif %}
 
-  <!-- Existing conversations -->
-  {% if messages %}
+  <!-- Existing conversations (one row per partner) -->
+  {% if threads %}
     <ul class="list-group">
-      {% for m in messages %}
+      {% for t in threads %}
         <li class="list-group-item">
-          {% if m.sender.id == user.profile.id %}
-            {# You sent this -> other is recipient #}
-            <a href="{% url 'conversation' m.recipient.id %}">
-              {{ m.recipient.user.username }}
-            </a>
-          {% else %}
-            {# You received this -> other is sender #}
-            <a href="{% url 'conversation' m.sender.id %}">
-              {{ m.sender.user.username }}
-            </a>
-          {% endif %}
-
+          <a href="{% url 'conversation' t.other.id %}">
+            {{ t.other.user.username }}
+          </a>
           <span class="text-muted small ms-2">
-            {{ m.sent_at|date:"M d, Y, g:i a" }}
+            {{ t.sent_at|date:"M d, Y, g:i a" }}
           </span>
           <div class="small text-muted">
-            {{ m.content|truncatechars:80 }}
+            {{ t.content|truncatechars:80 }}
           </div>
         </li>
       {% endfor %}
