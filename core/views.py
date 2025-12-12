@@ -1,4 +1,5 @@
 # Create your views here.
+from datetime import timezone
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login
 from django.contrib.auth.forms import UserCreationForm
@@ -131,19 +132,20 @@ def request_session(request, mentor_id):
             session.status = "PENDING"
             session.save()
 
-            # ✅ Notifications: scheduled (mentor + mentee)
+            # Notifications: scheduled (mentor + mentee)
+            when = fmt_dt(session.scheduled_at)
+
             notify(
                 recipient_profile=session.mentor,
-                title="New session scheduled",
-                message=f"{session.mentee.user.username} scheduled a session: {session.topic}.",
-                link="/my_sessions/",
+                title="Session scheduled",
+                message=f"{session.mentee.user.username} scheduled a meeting for {session.topic} on {when}.",
             )
             notify(
                 recipient_profile=session.mentee,
                 title="Session scheduled",
-                message=f"You scheduled a session with {session.mentor.user.username}: {session.topic}.",
-                link="/my_sessions/",
+                message=f"You scheduled a meeting for {session.topic} with {session.mentor.user.username} on {when}.",
             )
+
 
             return redirect("mentor_detail", mentor_id=mentor.id)
     else:
@@ -380,25 +382,27 @@ def update_session_status(request, session_id, new_status):
         session.status = new_status
         session.save()
 
+        when = fmt_dt(session.scheduled_at)
+
         # ==========================
         # Notifications
         # ==========================
-
         if new_status == "CONFIRMED":
             # Notify mentee
             notify(
                 recipient_profile=session.mentee,
                 title="Session confirmed",
-                message=f"{session.mentor.user.username} confirmed your session: {session.topic}.",
-                link="/my_sessions/",
+                message=(
+                    f"{session.mentor.user.username} confirmed a meeting for "
+                    f"{session.topic} on {when}."
+                ),
             )
 
             # Notify mentor
             notify(
                 recipient_profile=session.mentor,
                 title="Session confirmed",
-                message=f"You confirmed a session with {session.mentee.user.username}: {session.topic}.",
-                link="/my_sessions/",
+                message=f"You confirmed a meeting for {session.topic} on {when}.",
             )
 
         elif new_status == "CANCELLED":
@@ -406,21 +410,23 @@ def update_session_status(request, session_id, new_status):
             notify(
                 recipient_profile=session.mentee,
                 title="Session cancelled",
-                message=f"{session.mentor.user.username} cancelled your session: {session.topic}.",
-                link="/my_sessions/",
+                message=(
+                    f"{session.mentor.user.username} cancelled the meeting for "
+                    f"{session.topic} on {when}."
+                ),
             )
 
             # Notify mentor
             notify(
                 recipient_profile=session.mentor,
                 title="Session cancelled",
-                message=f"You cancelled a session with {session.mentee.user.username}: {session.topic}.",
-                link="/my_sessions/",
+                message=f"You cancelled the meeting for {session.topic} on {when}.",
             )
 
-        # (Optional) no notification for COMPLETED unless you want one
+        # Optional: COMPLETED notification if you want later
 
     return redirect("my_sessions")
+
 
 @login_required
 def leave_review(request, session_id):
@@ -499,69 +505,60 @@ def edit_availability(request):
 def inbox(request):
     profile = request.user.profile
 
-    # --- 1) All messages involving this profile, newest first ---
+    # --- Messages (threads) ---
     all_msgs = (
-        Message.objects.filter(
-            Q(sender=profile) | Q(recipient=profile)
-        )
+        Message.objects.filter(Q(sender=profile) | Q(recipient=profile))
         .select_related("sender__user", "recipient__user")
         .order_by("-sent_at")
     )
 
-    # --- 2) Build one "thread" per conversation partner ---
     threads = []
     seen_partner_ids = set()
-
     for msg in all_msgs:
-        # Who is the other person in this message?
         other = msg.recipient if msg.sender == profile else msg.sender
-
-        # If we already created a thread for this person, skip
         if other.id in seen_partner_ids:
             continue
-
         seen_partner_ids.add(other.id)
-        # Attach convenience attribute so the template can use it
         msg.other = other
         threads.append(msg)
 
-    # --- 3) Contacts you can start a conversation with (unchanged) ---
+    # --- Contacts ---
     if profile.role == "MENTEE":
-        # mentee -> mentors they follow
         contacts = (
-            Profile.objects
-            .filter(
-                id__in=Follow.objects.filter(follower=profile)
-                                      .values_list("mentor_id", flat=True)
-            )
-            .select_related("user")
+            Profile.objects.filter(
+                id__in=Follow.objects.filter(follower=profile).values_list("mentor_id", flat=True)
+            ).select_related("user")
         )
     else:
-        # mentor -> mentees that follow them
         contacts = (
-            Profile.objects
-            .filter(
-                id__in=Follow.objects.filter(mentor=profile)
-                                      .values_list("follower_id", flat=True)
-            )
-            .select_related("user")
+            Profile.objects.filter(
+                id__in=Follow.objects.filter(mentor=profile).values_list("follower_id", flat=True)
+            ).select_related("user")
         )
-    # --- 4) Notifications (below messages) ---
-    notifications = (
-        Notification.objects
-        .filter(recipient=profile)
-        .order_by("-created_at")[:20]
-    )
-    unread_count = Notification.objects.filter(recipient=profile, is_read=False).count()
+
+    # --- Notifications ---
+    notifications_qs = Notification.objects.filter(recipient=profile).order_by("-created_at")
+
+    # count BEFORE marking read (optional; you can remove if you don't care)
+    unread_count = notifications_qs.filter(is_read=False).count()
+
+    # ✅ Mark all as read when opening inbox
+    notifications_qs.filter(is_read=False).update(is_read=True)
+
+    # show last 20
+    notifications = notifications_qs[:20]
 
     return render(
         request,
         "core/inbox.html",
         {
-            "threads": threads,   # <- use threads instead of raw messages
+            "threads": threads,
             "contacts": contacts,
+            "notifications": notifications,
+            "unread_count": unread_count,  # will show on first load, then next refresh it'll be 0
         },
     )
+
 
 @login_required
 def conversation(request, profile_id):
@@ -604,21 +601,27 @@ def cancel_session(request, session_id):
         return redirect("my_sessions")
 
     if request.method == "POST":
+        when = fmt_dt(session.scheduled_at)
+
         session.status = "CANCELLED"
         session.save()
 
-        # ✅ Notifications: cancelled (mentor + mentee)
+        # Notifications: cancelled (mentor + mentee)
         notify(
             recipient_profile=session.mentor,
             title="Session cancelled",
-            message=f"{session.mentee.user.username} cancelled the session: {session.topic}.",
-            link="/my_sessions/",
+            message=(
+                f"{session.mentee.user.username} cancelled the meeting for "
+                f"{session.topic} on {when}."
+            ),
         )
         notify(
             recipient_profile=session.mentee,
             title="Session cancelled",
-            message=f"You cancelled the session with {session.mentor.user.username}: {session.topic}.",
-            link="/my_sessions/",
+            message=(
+                f"You cancelled the meeting for {session.topic} on {when} "
+                f"with {session.mentor.user.username}."
+            ),
         )
 
     return redirect("my_sessions")
@@ -638,19 +641,31 @@ def reschedule_session(request, session_id):
     if request.method == "POST":
         form = RescheduleForm(request.POST, instance=session)
         if form.is_valid():
-            old_time = session.scheduled_at  # save old time before changing
+            old_time = session.scheduled_at  # old time BEFORE saving
             updated = form.save(commit=False)
             updated.save()
 
-            # ✅ Notification: rescheduled (mentee only)
+            old_when = fmt_dt(old_time)
+            new_when = fmt_dt(updated.scheduled_at)
+
+            # Notify mentee
             notify(
                 recipient_profile=session.mentee,
                 title="Session rescheduled",
                 message=(
-                    f"{session.mentor.user.username} rescheduled your session "
-                    f"({session.topic}) from {old_time} to {updated.scheduled_at}."
+                    f"{session.mentor.user.username} rescheduled the meeting for "
+                    f"{session.topic} from {old_when} to {new_when}."
                 ),
-                link="/my_sessions/",
+            )
+
+            # Notify mentor too
+            notify(
+                recipient_profile=session.mentor,
+                title="Session rescheduled",
+                message=(
+                    f"You rescheduled the meeting for {session.topic} "
+                    f"from {old_when} to {new_when}."
+                ),
             )
 
             return redirect("my_sessions")
@@ -1042,3 +1057,22 @@ def delete_post(request, post_id):
 
     post.delete()
     return redirect("feed")
+
+def fmt_dt(dt):
+    return timezone.localtime(dt).strftime("%b %d, %Y %-I:%M %p").lstrip("0")
+
+@login_required
+@require_POST
+def delete_notification(request, notif_id):
+    profile = request.user.profile
+    n = get_object_or_404(Notification, id=notif_id, recipient=profile)
+    n.delete()
+    return redirect("inbox")
+
+
+@login_required
+@require_POST
+def clear_notifications(request):
+    profile = request.user.profile
+    Notification.objects.filter(recipient=profile).delete()
+    return redirect("inbox")

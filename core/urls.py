@@ -59,6 +59,9 @@ urlpatterns = [
     path("conversation/<int:profile_id>/", views.conversation, name="conversation"),
     path("follow/<int:mentor_id>/", views.toggle_follow, name="toggle_follow"),
     path("posts/<int:post_id>/delete/", views.delete_post, name="delete_post"),
+    path("inbox/", views.inbox, name="inbox"),
+    path("notifications/<int:notif_id>/delete/", views.delete_notification, name="delete_notification"),
+    path("notifications/clear/", views.clear_notifications, name="clear_notifications"),
 
 ]
     
