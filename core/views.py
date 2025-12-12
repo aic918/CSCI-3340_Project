@@ -3,7 +3,9 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login
 from django.contrib.auth.forms import UserCreationForm
 from django.urls import reverse
-from .models import Profile, Session, Review, Availability, Message, Connection, Post, PostLike, PostComment, Follow
+
+from core.utils import notify
+from .models import Profile, Session, Review, Availability, Message, Connection, Post, PostLike, PostComment, Follow, Notification
 from django.contrib.auth import logout
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q, Avg
@@ -128,7 +130,21 @@ def request_session(request, mentor_id):
             session.mentee = request.user.profile
             session.status = "PENDING"
             session.save()
-            # Later we can redirect to "my sessions" page
+
+            # ✅ Notifications: scheduled (mentor + mentee)
+            notify(
+                recipient_profile=session.mentor,
+                title="New session scheduled",
+                message=f"{session.mentee.user.username} scheduled a session: {session.topic}.",
+                link="/my_sessions/",
+            )
+            notify(
+                recipient_profile=session.mentee,
+                title="Session scheduled",
+                message=f"You scheduled a session with {session.mentor.user.username}: {session.topic}.",
+                link="/my_sessions/",
+            )
+
             return redirect("mentor_detail", mentor_id=mentor.id)
     else:
         form = SessionRequestForm()
@@ -138,6 +154,7 @@ def request_session(request, mentor_id):
         "form": form,
     }
     return render(request, "core/request_session.html", context)
+
 
 
 # Role selection view
@@ -363,6 +380,46 @@ def update_session_status(request, session_id, new_status):
         session.status = new_status
         session.save()
 
+        # ==========================
+        # Notifications
+        # ==========================
+
+        if new_status == "CONFIRMED":
+            # Notify mentee
+            notify(
+                recipient_profile=session.mentee,
+                title="Session confirmed",
+                message=f"{session.mentor.user.username} confirmed your session: {session.topic}.",
+                link="/my_sessions/",
+            )
+
+            # Notify mentor
+            notify(
+                recipient_profile=session.mentor,
+                title="Session confirmed",
+                message=f"You confirmed a session with {session.mentee.user.username}: {session.topic}.",
+                link="/my_sessions/",
+            )
+
+        elif new_status == "CANCELLED":
+            # Notify mentee
+            notify(
+                recipient_profile=session.mentee,
+                title="Session cancelled",
+                message=f"{session.mentor.user.username} cancelled your session: {session.topic}.",
+                link="/my_sessions/",
+            )
+
+            # Notify mentor
+            notify(
+                recipient_profile=session.mentor,
+                title="Session cancelled",
+                message=f"You cancelled a session with {session.mentee.user.username}: {session.topic}.",
+                link="/my_sessions/",
+            )
+
+        # (Optional) no notification for COMPLETED unless you want one
+
     return redirect("my_sessions")
 
 @login_required
@@ -489,6 +546,13 @@ def inbox(request):
             )
             .select_related("user")
         )
+    # --- 4) Notifications (below messages) ---
+    notifications = (
+        Notification.objects
+        .filter(recipient=profile)
+        .order_by("-created_at")[:20]
+    )
+    unread_count = Notification.objects.filter(recipient=profile, is_read=False).count()
 
     return render(
         request,
@@ -543,7 +607,22 @@ def cancel_session(request, session_id):
         session.status = "CANCELLED"
         session.save()
 
+        # ✅ Notifications: cancelled (mentor + mentee)
+        notify(
+            recipient_profile=session.mentor,
+            title="Session cancelled",
+            message=f"{session.mentee.user.username} cancelled the session: {session.topic}.",
+            link="/my_sessions/",
+        )
+        notify(
+            recipient_profile=session.mentee,
+            title="Session cancelled",
+            message=f"You cancelled the session with {session.mentor.user.username}: {session.topic}.",
+            link="/my_sessions/",
+        )
+
     return redirect("my_sessions")
+
 
 
 @login_required
@@ -559,11 +638,21 @@ def reschedule_session(request, session_id):
     if request.method == "POST":
         form = RescheduleForm(request.POST, instance=session)
         if form.is_valid():
+            old_time = session.scheduled_at  # save old time before changing
             updated = form.save(commit=False)
-            # When rescheduled, you can keep it CONFIRMED or move back to PENDING.
-            # Here we'll keep the current status:
-            # updated.status = "PENDING"
             updated.save()
+
+            # ✅ Notification: rescheduled (mentee only)
+            notify(
+                recipient_profile=session.mentee,
+                title="Session rescheduled",
+                message=(
+                    f"{session.mentor.user.username} rescheduled your session "
+                    f"({session.topic}) from {old_time} to {updated.scheduled_at}."
+                ),
+                link="/my_sessions/",
+            )
+
             return redirect("my_sessions")
     else:
         form = RescheduleForm(instance=session)
@@ -573,6 +662,7 @@ def reschedule_session(request, session_id):
         "core/reschedule_session.html",
         {"form": form, "session": session},
     )
+
 
 @login_required
 def feed(request):
