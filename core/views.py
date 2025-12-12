@@ -1076,3 +1076,17 @@ def clear_notifications(request):
     profile = request.user.profile
     Notification.objects.filter(recipient=profile).delete()
     return redirect("inbox")
+
+@login_required
+def welcome(request):
+    profile = request.user.profile
+
+    # If user already saw welcome, never show again
+    if profile.has_seen_welcome:
+        return redirect("dashboard")
+
+    # Mark as seen the first time
+    profile.has_seen_welcome = True
+    profile.save()
+
+    return render(request, "core/welcome.html")
