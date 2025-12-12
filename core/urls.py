@@ -58,7 +58,7 @@ urlpatterns = [
     path("profiles/<int:profile_id>/", views.profile_public, name="profile_public"),
     path("conversation/<int:profile_id>/", views.conversation, name="conversation"),
     path("follow/<int:mentor_id>/", views.toggle_follow, name="toggle_follow"),
-
+    path("posts/<int:post_id>/delete/", views.delete_post, name="delete_post"),
 
 ]
     

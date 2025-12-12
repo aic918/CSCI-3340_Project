@@ -18,18 +18,52 @@
             <div class="card mb-3">
                 <div class="card-body">
 
-                    <!-- POST HEADER: AUTHOR NAME IS CLICKABLE -->
-                    <p class="mb-1">
-                        <strong>
-                            <a href="{% url 'profile_public' post.author.id %}">
+                   <!-- POST HEADER: AUTHOR NAME IS CLICKABLE -->
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div>
+                            <p class="mb-1">
+                            <strong>
+                                <a href="{% url 'profile_public' post.author.id %}">
                                 {{ post.author.user.username }}
-                            </a>
-                        </strong>
-                        <br>
-                        <small class="text-muted">
-                            {{ post.created_at|date:"M d, Y, g:i a" }}
-                        </small>
-                    </p>
+                                </a>
+                            </strong>
+                            <br>
+                            <small class="text-muted">
+                                {{ post.created_at|date:"M d, Y, g:i a" }}
+                            </small>
+                            </p>
+                        </div>
+                        {% if post.author == user.profile %}
+                        <div class="ms-2 text-end">
+                            <!-- Edit toggle button -->
+                            <button class="btn btn-sm btn-outline-secondary"
+                                    type="button"
+                                    data-bs-toggle="collapse"
+                                    data-bs-target="#postActions{{ post.id }}"
+                                    aria-expanded="false">
+                            Edit
+                            </button>
+
+                            <!-- Hidden actions -->
+                            <div class="collapse mt-2" id="postActions{{ post.id }}">
+                            <div class="d-flex justify-content-end gap-2">
+                                <a href="{% url 'edit_post' post.id %}" class="btn btn-sm btn-outline-primary">
+                                Edit Content
+                                </a>
+
+                                <form method="post"
+                                    action="{% url 'delete_post' post.id %}"
+                                    onsubmit="return confirm('Delete this post?');">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-outline-danger">
+                                    Delete
+                                </button>
+                                </form>
+                            </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                        </div>
 
                     <!-- CONTENT -->
                     <p class="mb-2">{{ post.content }}</p>
