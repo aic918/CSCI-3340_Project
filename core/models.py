@@ -2,7 +2,6 @@ from django.db import models
 
 # Create your models here.
 from django.conf import settings
-from django.db import models
 from django.contrib.auth.models import User
 import random
 import string
@@ -49,7 +48,15 @@ class Profile(models.Model):
         blank=True,
         help_text="Only for mentors",
     )
-    # Optional: if you already added this earlier for profile pictures
+
+    # ✅ NEW FIELD: Mentor’s personal Calendly scheduling link
+    calendly_url = models.URLField(
+        blank=True,
+        null=True,
+        help_text="Mentor's Calendly scheduling link (e.g. https://calendly.com/yourname/30min)",
+    )
+
+    # Optional: profile picture
     photo = models.ImageField(
         upload_to="profiles/",
         blank=True,
@@ -65,21 +72,19 @@ class Profile(models.Model):
     def __str__(self):
         return f"{self.user.username} ({self.get_role_display()})"
 
-    # ------- NEW: auto-generate public_id once -------
+    # ------- Auto-generate public_id once -------
     def save(self, *args, **kwargs):
         if not self.public_id:
             self.public_id = self._generate_public_id()
         super().save(*args, **kwargs)
 
     def _generate_public_id(self):
-        """
-        Generate a 6-digit numeric ID like 482931.
-        Loops until it finds one that isn't already used.
-        """
+        """Generate a 6-digit numeric ID (e.g. 482931)."""
         while True:
             new_id = "".join(random.choices(string.digits, k=6))
             if not Profile.objects.filter(public_id=new_id).exists():
                 return new_id
+
 
 class Session(models.Model):
     STATUS_CHOICES = [
@@ -140,19 +145,20 @@ class Message(models.Model):
     def __str__(self):
         return f"From {self.sender.display_name} to {self.recipient.display_name}"
 
+
 # Automatically create Profile when User is created
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
 @receiver(post_save, sender=settings.AUTH_USER_MODEL)
 def create_profile_for_new_user(sender, instance, created, **kwargs):
-    """
-    Automatically create a Profile whenever a new User is created.
-    Default role = MENTEE (you can change this later).
-    """
+    """Automatically create a Profile whenever a new User is created."""
     if created:
         Profile.objects.create(user=instance, role="MENTEE")
-#-------------------------ENDS HERE-------------------------------------------
+
+
+# -------------------------ENDS HERE-------------------------------------------
+
 class Availability(models.Model):
     DAY_OF_WEEK_CHOICES = [
         ("MONDAY", "Monday"),
@@ -179,13 +185,9 @@ class Availability(models.Model):
     def __str__(self):
         return f"{self.mentor} - {self.day_of_week} {self.start_time}-{self.end_time}"
 
+
 class Connection(models.Model):
-    """
-    A Linkedin-style connection between two profiles.
-    For your project:
-      - Usually mentee -> mentor
-      - Has a status: pending / accepted / declined
-    """
+    """A LinkedIn-style connection between two profiles."""
     STATUS_CHOICES = [
         ("PENDING", "Pending"),
         ("ACCEPTED", "Accepted"),
@@ -217,9 +219,7 @@ class Connection(models.Model):
 
 
 class Post(models.Model):
-    """
-    Short updates that mentors can post; shown in a shared feed.
-    """
+    """Short updates that mentors can post; shown in a shared feed."""
     author = models.ForeignKey(
         "Profile",
         related_name="posts",
@@ -232,8 +232,6 @@ class Post(models.Model):
         null=True,
     )
     created_at = models.DateTimeField(auto_now_add=True)
-
-    # Optional: later you can add tags, etc.
 
     class Meta:
         ordering = ["-created_at"]  # newest first
@@ -278,6 +276,7 @@ class PostComment(models.Model):
 
     def __str__(self):
         return f"Comment by {self.author.display_name} on Post #{self.post.id}"
+
 
 class Follow(models.Model):
     """

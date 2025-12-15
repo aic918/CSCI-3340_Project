@@ -3,7 +3,6 @@ from .models import Session, Profile, Review, Availability, Message, Post, PostC
 from django.utils import timezone
 
 
-
 class SessionRequestForm(forms.ModelForm):
     class Meta:
         model = Session
@@ -39,10 +38,13 @@ class SessionRequestForm(forms.ModelForm):
         return dt
 
 
-class ProfileForm(forms.ModelForm):
+class MenteeProfileForm(forms.ModelForm):
+    """
+    Mentee profile edit form (NO calendly_url).
+    """
     class Meta:
         model = Profile
-        fields = [ "first_name","last_name","bio", "skills", "hourly_rate", "photo"]  # ← include photo
+        fields = ["bio", "skills", "photo"]
         widgets = {
             "bio": forms.Textarea(
                 attrs={
@@ -54,8 +56,31 @@ class ProfileForm(forms.ModelForm):
             "skills": forms.TextInput(
                 attrs={
                     "class": "form-control",
-                    "id": "skills-input",             
-                    "autocomplete": "off",            
+                    "placeholder": "Data Structures, Python, Machine Learning",
+                }
+            ),
+            # photo uses default file input widget
+        }
+
+
+class MentorProfileForm(forms.ModelForm):
+    """
+    Mentor profile edit form (Calendly allowed).
+    """
+    class Meta:
+        model = Profile
+        fields = ["bio", "skills", "hourly_rate", "calendly_url", "photo"]
+        widgets = {
+            "bio": forms.Textarea(
+                attrs={
+                    "class": "form-control",
+                    "rows": 4,
+                    "placeholder": "Tell others about yourself...",
+                }
+            ),
+            "skills": forms.TextInput(
+                attrs={
+                    "class": "form-control",
                     "placeholder": "Data Structures, Python, Machine Learning",
                 }
             ),
@@ -65,8 +90,26 @@ class ProfileForm(forms.ModelForm):
                     "step": "0.01",
                 }
             ),
+            "calendly_url": forms.TextInput(
+                attrs={
+                    "class": "form-control",
+                    "placeholder": "https://calendly.com/yourname/30min",
+                }
+            ),
             # photo uses default file input widget
         }
+
+    def clean_calendly_url(self):
+        url = self.cleaned_data.get("calendly_url")
+
+        if not url:
+            return url  # allow blank
+
+        # quick validation: must be Calendly
+        if "calendly.com" not in url:
+            raise forms.ValidationError("Please enter a valid Calendly link (https://calendly.com/...).")
+
+        return url
 
 
 
@@ -87,6 +130,7 @@ class ReviewForm(forms.ModelForm):
                 "placeholder": "Write your feedback about this session...",
             }),
         }
+
 
 class AvailabilityForm(forms.Form):
     """
@@ -110,6 +154,7 @@ class AvailabilityForm(forms.Form):
         label="End time",
     )
 
+
 class MessageForm(forms.ModelForm):
     class Meta:
         model = Message
@@ -122,6 +167,7 @@ class MessageForm(forms.ModelForm):
             }),
         }
 
+
 class RescheduleForm(forms.ModelForm):
     class Meta:
         model = Session
@@ -131,12 +177,14 @@ class RescheduleForm(forms.ModelForm):
                 attrs={"class": "form-control", "type": "datetime-local"}
             )
         }
+
     def clean_scheduled_at(self):
         dt = self.cleaned_data["scheduled_at"]
         if dt and dt < timezone.now():
             raise forms.ValidationError("Please choose a date and time in the future.")
         return dt
-    
+
+
 class CommentForm(forms.ModelForm):
     class Meta:
         model = PostComment

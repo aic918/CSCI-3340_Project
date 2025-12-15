@@ -44,8 +44,10 @@ urlpatterns = [
         views.respond_connection_request,
         name="respond_connection_request",
     ),
+    #public profiles
     path("profile/", views.profile_view, name="profile"),
     path("profile/edit/", views.edit_profile, name="edit_profile"),
+    
     path("availability/<int:availability_id>/delete/", views.delete_availability, name="delete_availability"),
     path("feed/", views.feed, name="feed"),
     path("posts/new/", views.create_post, name="create_post"),
@@ -58,12 +60,12 @@ urlpatterns = [
     path("profiles/<int:profile_id>/", views.profile_public, name="profile_public"),
     path("conversation/<int:profile_id>/", views.conversation, name="conversation"),
     path("follow/<int:mentor_id>/", views.toggle_follow, name="toggle_follow"),
-    path("posts/<int:post_id>/delete/", views.delete_post, name="delete_post"),
-    path("inbox/", views.inbox, name="inbox"),
-    path("notifications/<int:notif_id>/delete/", views.delete_notification, name="delete_notification"),
-    path("notifications/clear/", views.clear_notifications, name="clear_notifications"),
-    path("skills/autocomplete/", views.skill_autocomplete, name="skill_autocomplete"),
+
+#path for online scheduler
+   path("schedule/<int:mentor_id>/", views.schedule, name="schedule"),
+
+
 
 ]
-    
+
 

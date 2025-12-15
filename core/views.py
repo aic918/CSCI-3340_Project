@@ -1,23 +1,27 @@
 # Create your views here.
-from datetime import timezone
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login
 from django.contrib.auth.forms import UserCreationForm
 from django.urls import reverse
-
-from core.utils import notify
-from .models import Profile, Session, Review, Availability, Message, Connection, Post, PostLike, PostComment, Follow, Notification
+from .models import Profile, Session, Review, Availability, Message, Connection, Post, PostLike, PostComment, Follow
 from django.contrib.auth import logout
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q, Avg
-from .forms import SessionRequestForm, ProfileForm, ReviewForm, AvailabilityForm, MessageForm, RescheduleForm, CommentForm
+from .forms import (
+    SessionRequestForm,
+    MenteeProfileForm,
+    MentorProfileForm,
+    ReviewForm,
+    AvailabilityForm,
+    MessageForm,
+    RescheduleForm,
+    CommentForm,
+)
+
 from django import forms
 from django.views.decorators.http import require_POST
-from django.http import JsonResponse
-from datetime import timezone as dt_timezone
-from django.utils import timezone
-from .models import Skill
-
+from django.http import HttpResponse
+from django.shortcuts import render
 
 @login_required
 @require_POST
@@ -54,6 +58,13 @@ def home(request):
 def logout_view(request):
     logout(request)        # clears the session
     return redirect("home")
+#scheduler
+from django.shortcuts import render, get_object_or_404
+from .models import Profile
+
+def schedule(request, mentor_id):
+    mentor = get_object_or_404(Profile, id=mentor_id, role="MENTOR")
+    return render(request, "schedule.html", {"mentor": mentor})
 
 # Mentor list view
 # Mentor list view
@@ -67,10 +78,10 @@ def mentor_list(request):
             Q(user__username__icontains=query) |
             Q(bio__icontains=query) |
             Q(skills__icontains=query) |
-            Q(public_id__iexact=query)|
-            Q(first_name__icontains=query) |
-            Q(last_name__icontains=query)
+            Q(public_id__iexact=query)
         )
+
+
 
     # NEW: annotate average rating for each mentor
     mentors = mentors.annotate(
@@ -138,25 +149,7 @@ def request_session(request, mentor_id):
             session.mentee = request.user.profile
             session.status = "PENDING"
             session.save()
-
-            # Notifications: scheduled (mentor + mentee)
-            when = fmt_dt(session.scheduled_at)
-
-            mentee_name = session.mentee.display_name()  
-            mentor_name = session.mentor.display_name() 
-
-            notify(
-                recipient_profile=session.mentor,
-                title="Session scheduled",
-                message=f"{mentee_name} scheduled a meeting for {session.topic} on {when}.",
-            )
-            notify(
-                recipient_profile=session.mentee,
-                title="Session scheduled",
-                message=f"You scheduled a meeting for {session.topic} with {mentor_name} on {when}.",
-            )
-
-
+            # Later we can redirect to "my sessions" page
             return redirect("mentor_detail", mentor_id=mentor.id)
     else:
         form = SessionRequestForm()
@@ -166,7 +159,6 @@ def request_session(request, mentor_id):
         "form": form,
     }
     return render(request, "core/request_session.html", context)
-
 
 
 # Role selection view
@@ -344,36 +336,28 @@ def profile_view(request):
     }
     return render(request, "core/profile.html", context)
 
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render, redirect
+
 @login_required
 def edit_profile(request):
-    profile, created = Profile.objects.get_or_create(
-        user=request.user,
-        defaults={"role": "MENTEE"}  # default if they somehow had none
-    )
+    profile = request.user.profile
+
+    # ✅ Choose form based on role
+    if profile.role == "MENTOR":
+        FormClass = MentorProfileForm
+    else:
+        FormClass = MenteeProfileForm
 
     if request.method == "POST":
-        form = ProfileForm(request.POST, request.FILES, instance=profile)
+        form = FormClass(request.POST, request.FILES, instance=profile)
         if form.is_valid():
-            profile = form.save(commit=False)
-
-            # 🔒 Mentees can never have an hourly rate
-            if profile.role != "MENTOR":
-                profile.hourly_rate = None
-
-            profile.save()
-            return redirect("profile")  # after editing, go back to profile page
+            form.save()
+            return redirect("profile")  # change to your URL name
     else:
-        form = ProfileForm(instance=profile)
+        form = FormClass(instance=profile)
 
-    is_mentor = profile.role == "MENTOR"
-
-    return render(
-        request,
-        "core/edit_profile.html",
-        {"form": form, "is_mentor": is_mentor},
-    )
-
-
+    return render(request, "core/edit_profile.html", {"form": form})
 
 @login_required
 def update_session_status(request, session_id, new_status):
@@ -392,51 +376,7 @@ def update_session_status(request, session_id, new_status):
         session.status = new_status
         session.save()
 
-        when = fmt_dt(session.scheduled_at)
-
-        # ==========================
-        # Notifications
-        # ==========================
-        if new_status == "CONFIRMED":
-            # Notify mentee
-            notify(
-                recipient_profile=session.mentee,
-                title="Session confirmed",
-                message=(
-                    f"{session.mentor.display_name} confirmed a meeting for "
-                    f"{session.topic} on {when}."
-                ),
-            )
-
-            # Notify mentor
-            notify(
-                recipient_profile=session.mentor,
-                title="Session confirmed",
-                message=f"You confirmed a meeting for {session.topic} on {when}.",
-            )
-
-        elif new_status == "CANCELLED":
-            # Notify mentee
-            notify(
-                recipient_profile=session.mentee,
-                title="Session cancelled",
-                message=(
-                    f"{session.mentor.display_name} cancelled the meeting for "
-                    f"{session.topic} on {when}."
-                ),
-            )
-
-            # Notify mentor
-            notify(
-                recipient_profile=session.mentor,
-                title="Session cancelled",
-                message=f"You cancelled the meeting for {session.topic} on {when}.",
-            )
-
-        # Optional: COMPLETED notification if you want later
-
     return redirect("my_sessions")
-
 
 @login_required
 def leave_review(request, session_id):
@@ -515,60 +455,62 @@ def edit_availability(request):
 def inbox(request):
     profile = request.user.profile
 
-    # --- Messages (threads) ---
+    # --- 1) All messages involving this profile, newest first ---
     all_msgs = (
-        Message.objects.filter(Q(sender=profile) | Q(recipient=profile))
+        Message.objects.filter(
+            Q(sender=profile) | Q(recipient=profile)
+        )
         .select_related("sender__user", "recipient__user")
         .order_by("-sent_at")
     )
 
+    # --- 2) Build one "thread" per conversation partner ---
     threads = []
     seen_partner_ids = set()
+
     for msg in all_msgs:
+        # Who is the other person in this message?
         other = msg.recipient if msg.sender == profile else msg.sender
+
+        # If we already created a thread for this person, skip
         if other.id in seen_partner_ids:
             continue
+
         seen_partner_ids.add(other.id)
+        # Attach convenience attribute so the template can use it
         msg.other = other
         threads.append(msg)
 
-    # --- Contacts ---
+    # --- 3) Contacts you can start a conversation with (unchanged) ---
     if profile.role == "MENTEE":
+        # mentee -> mentors they follow
         contacts = (
-            Profile.objects.filter(
-                id__in=Follow.objects.filter(follower=profile).values_list("mentor_id", flat=True)
-            ).select_related("user")
+            Profile.objects
+            .filter(
+                id__in=Follow.objects.filter(follower=profile)
+                                      .values_list("mentor_id", flat=True)
+            )
+            .select_related("user")
         )
     else:
+        # mentor -> mentees that follow them
         contacts = (
-            Profile.objects.filter(
-                id__in=Follow.objects.filter(mentor=profile).values_list("follower_id", flat=True)
-            ).select_related("user")
+            Profile.objects
+            .filter(
+                id__in=Follow.objects.filter(mentor=profile)
+                                      .values_list("follower_id", flat=True)
+            )
+            .select_related("user")
         )
-
-    # --- Notifications ---
-    notifications_qs = Notification.objects.filter(recipient=profile).order_by("-created_at")
-
-    # count BEFORE marking read (optional; you can remove if you don't care)
-    unread_count = notifications_qs.filter(is_read=False).count()
-
-    # ✅ Mark all as read when opening inbox
-    notifications_qs.filter(is_read=False).update(is_read=True)
-
-    # show last 20
-    notifications = notifications_qs[:20]
 
     return render(
         request,
         "core/inbox.html",
         {
-            "threads": threads,
+            "threads": threads,   # <- use threads instead of raw messages
             "contacts": contacts,
-            "notifications": notifications,
-            "unread_count": unread_count,  # will show on first load, then next refresh it'll be 0
         },
     )
-
 
 @login_required
 def conversation(request, profile_id):
@@ -611,34 +553,10 @@ def cancel_session(request, session_id):
         return redirect("my_sessions")
 
     if request.method == "POST":
-        when = fmt_dt(session.scheduled_at)
-
         session.status = "CANCELLED"
         session.save()
 
-        mentee_name = session.mentee.display_name()   
-        mentor_name = session.mentor.display_name()
-
-        # Notifications: cancelled (mentor + mentee)
-        notify(
-            recipient_profile=session.mentor,
-            title="Session cancelled",
-            message=(
-                f"{mentee_name} cancelled the meeting for "
-                f"{session.topic} on {when}."
-            ),
-        )
-        notify(
-            recipient_profile=session.mentee,
-            title="Session cancelled",
-            message=(
-                f"You cancelled the meeting for {session.topic} on {when} "
-                f"with {mentor_name}."
-            ),
-        )
-
     return redirect("my_sessions")
-
 
 
 @login_required
@@ -654,34 +572,11 @@ def reschedule_session(request, session_id):
     if request.method == "POST":
         form = RescheduleForm(request.POST, instance=session)
         if form.is_valid():
-            old_time = session.scheduled_at  # old time BEFORE saving
             updated = form.save(commit=False)
+            # When rescheduled, you can keep it CONFIRMED or move back to PENDING.
+            # Here we'll keep the current status:
+            # updated.status = "PENDING"
             updated.save()
-
-            old_when = fmt_dt(old_time)
-            new_when = fmt_dt(updated.scheduled_at)
-
-            mentor_name = session.mentor.display_name()
-            # Notify mentee
-            notify(
-                recipient_profile=session.mentee,
-                title="Session rescheduled",
-                message=(
-                    f"{mentor_name} rescheduled the meeting for "
-                    f"{session.topic} from {old_when} to {new_when}."
-                ),
-            )
-
-            # Notify mentor too
-            notify(
-                recipient_profile=session.mentor,
-                title="Session rescheduled",
-                message=(
-                    f"You rescheduled the meeting for {session.topic} "
-                    f"from {old_when} to {new_when}."
-                ),
-            )
-
             return redirect("my_sessions")
     else:
         form = RescheduleForm(instance=session)
@@ -691,7 +586,6 @@ def reschedule_session(request, session_id):
         "core/reschedule_session.html",
         {"form": form, "session": session},
     )
-
 
 @login_required
 def feed(request):
@@ -1060,64 +954,3 @@ def profile_public(request, profile_id):
             "is_following": is_following,
         },
     )
-@login_required
-@require_POST
-def delete_post(request, post_id):
-    post = get_object_or_404(Post, id=post_id)
-
-    # Only the author can delete their post
-    if request.user.profile != post.author:
-        return redirect("feed")
-
-    post.delete()
-    return redirect("feed")
-
-def fmt_dt(dt):
-    if not dt:
-        return ""
-    dt_local = timezone.localtime(dt) if timezone.is_aware(dt) else dt
-    return dt_local.strftime("%b %d, %Y %-I:%M %p").lstrip("0")
-
-
-@login_required
-@require_POST
-def delete_notification(request, notif_id):
-    profile = request.user.profile
-    n = get_object_or_404(Notification, id=notif_id, recipient=profile)
-    n.delete()
-    return redirect("inbox")
-
-
-@login_required
-@require_POST
-def clear_notifications(request):
-    profile = request.user.profile
-    Notification.objects.filter(recipient=profile).delete()
-    return redirect("inbox")
-
-@login_required
-def welcome(request):
-    profile = request.user.profile
-
-    # If user already saw welcome, never show again
-    if profile.has_seen_welcome:
-        return redirect("dashboard")
-
-    # Mark as seen the first time
-    profile.has_seen_welcome = True
-    profile.save()
-
-    return render(request, "core/welcome.html")
-
-@login_required
-def skill_autocomplete(request):
-    q = request.GET.get("q", "").strip()
-    if not q:
-        return JsonResponse([], safe=False)
-
-    skills = (
-        Skill.objects
-        .filter(name__icontains=q)
-        .order_by("name")[:10]
-    )
-    return JsonResponse([s.name for s in skills], safe=False)

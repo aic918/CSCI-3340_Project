@@ -6,9 +6,17 @@ admin.site.register(Skill)
 
 @admin.register(Profile)
 class ProfileAdmin(admin.ModelAdmin):
-    list_display = ("user", "role", "skills", "hourly_rate")
+    # ✅ Show Calendly in the admin list so you can quickly spot wrong links
+    list_display = ("user", "role", "public_id", "skills", "hourly_rate", "calendly_url")
     list_filter = ("role",)
-    search_fields = ("user__username", "skills", "bio")
+    search_fields = ("user__username", "public_id", "skills", "bio", "calendly_url")
+
+    # ✅ Safety: if a profile is NOT a mentor, Calendly becomes read-only in admin
+    # (prevents accidental admin edits that attach links to mentees)
+    def get_readonly_fields(self, request, obj=None):
+        if obj and obj.role != "MENTOR":
+            return ("calendly_url",)
+        return ()
 
 
 @admin.register(Session)

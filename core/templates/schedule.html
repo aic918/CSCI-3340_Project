@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-5">
+
+  <h1 class="mb-4 text-center">
+    Book a Session with {{ mentor.user.get_full_name|default:mentor.user.username }}
+  </h1>
+
+  <p class="text-center mb-4">
+    Choose a time that works for you. Payment and scheduling are handled securely
+    through Calendly.
+  </p>
+
+  <div class="row">
+    <div class="col-lg-8 mx-auto">
+
+      {% if mentor.calendly_url %}
+        <div class="calendly-inline-widget"
+             data-url="{{ mentor.calendly_url }}"
+             style="min-width:320px;height:700px;">
+        </div>
+
+        <script
+          src="https://assets.calendly.com/assets/external/widget.js"
+          async>
+        </script>
+      {% else %}
+        <p class="text-center text-muted">
+          This mentor has not added a scheduling link yet.
+        </p>
+      {% endif %}
+
+    </div>
+  </div>
+</div>
+{% endblock %}
