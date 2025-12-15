@@ -14,7 +14,7 @@
                     <div class="d-flex align-items-center">
                         {% if mentor.photo %}
                             <img src="{{ mentor.photo.url }}"
-                                 alt="{{ mentor.user.username }}"
+                                 alt="{{ mentor.display_name }}"
                                  class="rounded-circle me-3"
                                  style="width: 48px; height: 48px; object-fit: cover;">
                         {% else %}
@@ -24,7 +24,7 @@
 
                         <div>
                             <h5 class="mb-1">
-                                {{ mentor.user.username }}
+                                {{ mentor.display_name }}
                             </h5>
                             {% if mentor.skills %}
                                 <div class="text-muted small">

@@ -36,7 +36,7 @@
             {% for c in contacts %}
               <li class="d-flex justify-content-between align-items-center mb-2">
                 <a href="{% url 'conversation' c.id %}">
-                  {{ c.user.username }}
+                  {{ c.display_name }}
                 </a>
               </li>
             {% endfor %}
@@ -52,7 +52,7 @@
       {% for t in threads %}
         <li class="list-group-item">
           <a href="{% url 'conversation' t.other.id %}">
-            {{ t.other.user.username }}
+            {{ t.other.display_name }}
           </a>
           <span class="text-muted small ms-2">
             {{ t.sent_at|date:"M d, Y, g:i a" }}

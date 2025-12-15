@@ -2,10 +2,19 @@
 
 {% block content %}
 <div class="container py-5">
-    <!-- Page title -->
-    <h1 class="mentora-page-title mb-1">My Sessions</h1>
-    <p class="text-muted mb-4">{{ role_label }}</p>
+   <!-- Page title + mentee action -->
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-4">
+    <div>
+        <h1 class="mentora-page-title mb-1">My Sessions</h1>
+        <p class="text-muted mb-0">{{ role_label }}</p>
+    </div>
 
+    {% if user.is_authenticated and user.profile.role == "MENTEE" %}
+        <a href="{% url 'mentor_list' %}" class="btn btn-mentora-primary">
+            + Request New Session
+        </a>
+    {% endif %}
+</div>
     <!-- Glass panel around the table -->
     <div class="mentora-panel">
         {% if sessions %}
@@ -24,8 +33,8 @@
                         {% for s in sessions %}
                             <tr>
                                 <td><strong>{{ s.topic }}</strong></td>
-                                <td>{{ s.mentor.user.username }}</td>
-                                <td>{{ s.mentee.user.username }}</td>
+                                <td>{{ s.mentor.display_name }}</td>
+                                <td>{{ s.mentee.display_name }}</td>
                                 <td>
                                     {% if s.scheduled_at %}
                                         {{ s.scheduled_at|date:"M d, Y, g:i a" }}
@@ -52,8 +61,7 @@
                                               action="{% url 'update_session_status' s.id 'CONFIRMED' %}"
                                               style="display:inline;">
                                             {% csrf_token %}
-                                            <button type="submit"
-                                                    class="btn btn-sm btn-success ms-2">
+                                            <button type="submit" class="btn btn-mentora-primary btn-sm ms-2">
                                                 Accept
                                             </button>
                                         </form>
@@ -68,8 +76,7 @@
                                             </button>
                                         </form>
 
-                                        <a href="{% url 'reschedule_session' s.id %}"
-                                           class="btn btn-sm btn-outline-light ms-2">
+                                        <a href="#" class="btn btn-mentora-outline btn-sm ms-2">
                                             Reschedule
                                         </a>
                                     {% endif %}
@@ -95,8 +102,7 @@
                                               action="{% url 'cancel_session' s.id %}"
                                               style="display:inline;">
                                             {% csrf_token %}
-                                            <button type="submit"
-                                                    class="btn btn-sm btn-outline-danger ms-2">
+                                           <button type="submit" class="btn btn-mentora-danger btn-sm ms-2">
                                                 Cancel
                                             </button>
                                         </form>

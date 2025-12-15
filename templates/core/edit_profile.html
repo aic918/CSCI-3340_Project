@@ -17,6 +17,25 @@
     <form method="post" enctype="multipart/form-data" class="mt-3">
         {% csrf_token %}
 
+        <!-- First + Last Name -->
+        <div class="row">
+        <div class="col-md-6 mb-3">
+            {{ form.first_name.label_tag }}
+            {{ form.first_name }}
+            {% if form.first_name.errors %}
+                <div class="text-danger small">{{ form.first_name.errors }}</div>
+            {% endif %}
+        </div>
+
+        <div class="col-md-6 mb-3">
+            {{ form.last_name.label_tag }}
+            {{ form.last_name }}
+            {% if form.last_name.errors %}
+                <div class="text-danger small">{{ form.last_name.errors }}</div>
+            {% endif %}
+        </div>
+        </div>
+
         <!-- Bio -->
         <div class="mb-3">
             {{ form.bio.label_tag }}
@@ -26,16 +45,23 @@
             {% endif %}
         </div>
 
-        <!-- Skills -->
-        <div class="mb-3">
+       <!-- Skills -->
+        <div class="mb-3 position-relative">
             {{ form.skills.label_tag }}
             {{ form.skills }}
+
             {% if form.skills.errors %}
                 <div class="text-danger small">{{ form.skills.errors }}</div>
             {% endif %}
+
+            <!-- Autocomplete dropdown -->
+            <div id="skills-suggest-box"
+                class="list-group position-absolute w-100"
+                style="z-index: 1000; display: none;">
+            </div>
         </div>
 
-        <!-- 🔒 Only mentors see Hourly rate -->
+        <!--  Only mentors see Hourly rate -->
         {% if is_mentor %}
             <div class="mb-3">
                 {{ form.hourly_rate.label_tag }}
@@ -73,4 +99,80 @@
         <a href="{% url 'profile' %}" class="btn btn-link">Cancel</a>
     </form>
 </div>
+
+
+<script>
+(function () {
+  const input = document.getElementById("skills-input");
+  const box = document.getElementById("skills-suggest-box");
+  if (!input || !box) return;
+
+  let timer = null;
+
+  function getLastToken(value) {
+    const parts = value.split(",");
+    return parts[parts.length - 1].trim();
+  }
+
+  function replaceLastToken(value, newToken) {
+    const parts = value.split(",");
+    parts[parts.length - 1] = " " + newToken;
+    return parts.map(p => p.trim()).filter(Boolean).join(", ") + ", ";
+  }
+
+  function hideBox() {
+    box.style.display = "none";
+    box.innerHTML = "";
+  }
+
+  function showSuggestions(items) {
+    if (!items.length) return hideBox();
+    box.innerHTML = "";
+    items.forEach(name => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "list-group-item list-group-item-action";
+      btn.textContent = name;
+      btn.onclick = () => {
+        const existing = input.value
+          .split(",")
+          .map(s => s.trim().toLowerCase())
+          .filter(Boolean);
+
+        if (!existing.includes(name.toLowerCase())) {
+          input.value = replaceLastToken(input.value, name);
+        }
+        input.focus();
+        hideBox();
+      };
+      box.appendChild(btn);
+    });
+    box.style.display = "block";
+  }
+
+  async function fetchSkills(q) {
+    const url = "{% url 'skill_autocomplete' %}?q=" + encodeURIComponent(q);
+    const res = await fetch(url, { headers: { "X-Requested-With": "XMLHttpRequest" } });
+    if (!res.ok) return [];
+    return await res.json();
+  }
+
+  input.addEventListener("input", () => {
+    clearTimeout(timer);
+    timer = setTimeout(async () => {
+      const q = getLastToken(input.value);
+      if (!q || q.length < 2) return hideBox();
+      const items = await fetchSkills(q);
+      showSuggestions(items);
+    }, 200);
+  });
+
+  input.addEventListener("blur", () => {
+    setTimeout(hideBox, 150);
+  });
+
+})();
+</script>
+
+
 {% endblock %}

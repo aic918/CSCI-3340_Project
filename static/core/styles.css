@@ -250,3 +250,115 @@ a:hover {
 .table thead th {
     color: #ffffff;
 }
+
+.btn-mentora-primary {
+    background: linear-gradient(135deg, #7b5cff, #5b2cff);
+    border: none;
+    color: #fff;
+    font-weight: 500;
+    padding: 0.55rem 1.2rem;
+    border-radius: 10px;
+    box-shadow: 0 6px 20px rgba(123, 92, 255, 0.35);
+    transition: all 0.25s ease;
+}
+
+.btn-mentora-primary:hover {
+    background: linear-gradient(135deg, #8b6cff, #6a3cff);
+    box-shadow: 0 8px 24px rgba(123, 92, 255, 0.5);
+    transform: translateY(-1px);
+    color: #fff;
+}
+
+
+.btn-mentora-outline {
+    background: transparent;
+    border: 1px solid rgba(180, 160, 255, 0.6);
+    color: #d8ccff;
+    border-radius: 10px;
+    padding: 0.5rem 1.1rem;
+    transition: all 0.25s ease;
+}
+
+.btn-mentora-outline:hover {
+    background: rgba(180, 160, 255, 0.15);
+    color: #fff;
+    border-color: rgba(200, 180, 255, 0.9);
+}
+
+.btn-mentora-danger {
+    background: transparent;
+    border: 1px solid rgba(255, 120, 120, 0.6);
+    color: #ffb3b3;
+    border-radius: 10px;
+    padding: 0.45rem 1rem;
+    transition: all 0.25s ease;
+}
+
+.btn-mentora-danger:hover {
+    background: rgba(255, 120, 120, 0.15);
+    color: #fff;
+}
+
+/* ============================================================= */
+/*   Mentora color overrides for Bootstrap buttons (no shape changes) */
+/* ============================================================= */
+
+/* Filled buttons (Bootstrap primary/success) */
+.btn-primary,
+.btn-success {
+  background-color: #7b2cff !important;
+  border-color: #7b2cff !important;
+  color: #ffffff !important;
+}
+
+/* Hover */
+.btn-primary:hover,
+.btn-success:hover {
+  background-color: #8b3cff !important;
+  border-color: #8b3cff !important;
+  color: #ffffff !important;
+}
+
+/* Focus (Bootstrap adds blue glow by default) */
+.btn-primary:focus,
+.btn-success:focus,
+.btn-primary:focus-visible,
+.btn-success:focus-visible {
+  background-color: #8b3cff !important;
+  border-color: #8b3cff !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 0 0.25rem rgba(179, 140, 255, 0.35) !important;
+}
+
+/* Active */
+.btn-primary:active,
+.btn-success:active,
+.btn-primary.active,
+.btn-success.active {
+  background-color: #6a22d8 !important;
+  border-color: #6a22d8 !important;
+  color: #ffffff !important;
+}
+
+/* Outline buttons */
+.btn-outline-primary,
+.btn-outline-success {
+  color: #d8ccff !important;
+  border-color: rgba(179, 140, 255, 0.75) !important;
+}
+
+/* Outline hover */
+.btn-outline-primary:hover,
+.btn-outline-success:hover {
+  background-color: rgba(179, 140, 255, 0.15) !important;
+  border-color: rgba(179, 140, 255, 0.95) !important;
+  color: #ffffff !important;
+}
+
+/* Remove Bootstrap "success" green variables leaking into components */
+:root {
+  --bs-success: #7b2cff;
+  --bs-success-rgb: 123, 44, 255;
+}
+
+

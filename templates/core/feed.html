@@ -24,7 +24,7 @@
                             <p class="mb-1">
                             <strong>
                                 <a href="{% url 'profile_public' post.author.id %}">
-                                {{ post.author.user.username }}
+                                {{ post.author.display_name }}
                                 </a>
                             </strong>
                             <br>
@@ -106,7 +106,7 @@
                                 <p class="mb-1">
                                     <strong>
                                         <a href="{% url 'profile_public' c.author.id %}">
-                                            {{ c.author.user.username }}
+                                            {{ c.author.display_name }}
                                         </a>
                                     </strong>
                                     <small class="text-muted">

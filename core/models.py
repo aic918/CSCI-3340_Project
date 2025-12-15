@@ -21,8 +21,12 @@ class Profile(models.Model):
         on_delete=models.CASCADE,
         related_name="profile",
     )
-    role = models.CharField(max_length=10, choices=ROLE_CHOICES)
 
+    # ✅ NEW — display name fields
+    first_name = models.CharField(max_length=30, blank=True)
+    last_name = models.CharField(max_length=30, blank=True)
+
+    role = models.CharField(max_length=10, choices=ROLE_CHOICES)
     # NEW: shareable Mentora ID (e.g. "482931")
     public_id = models.CharField(
         max_length=10,
@@ -53,6 +57,10 @@ class Profile(models.Model):
     )
     
     has_seen_welcome = models.BooleanField(default=False)
+
+    def display_name(self):
+        name = f"{self.first_name} {self.last_name}".strip()
+        return name if name else self.user.username
 
     def __str__(self):
         return f"{self.user.username} ({self.get_role_display()})"
@@ -97,7 +105,7 @@ class Session(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.topic} - {self.mentor.user.username} with {self.mentee.user.username}"
+        return f"{self.topic} - {self.mentor.display_name} with {self.mentee.display_name}"
 
 
 class Review(models.Model):
@@ -130,7 +138,7 @@ class Message(models.Model):
     is_read = models.BooleanField(default=False)
 
     def __str__(self):
-        return f"From {self.sender.user.username} to {self.recipient.user.username}"
+        return f"From {self.sender.display_name} to {self.recipient.display_name}"
 
 # Automatically create Profile when User is created
 from django.db.models.signals import post_save
@@ -231,7 +239,7 @@ class Post(models.Model):
         ordering = ["-created_at"]  # newest first
 
     def __str__(self):
-        return f"Post by {self.author.user.username} on {self.created_at:%Y-%m-%d}"
+        return f"Post by {self.author.display_name} on {self.created_at:%Y-%m-%d}"
 
 
 class PostLike(models.Model):
@@ -251,7 +259,7 @@ class PostLike(models.Model):
         unique_together = ("post", "user")
 
     def __str__(self):
-        return f"{self.user.user.username} likes Post #{self.post.id}"
+        return f"{self.user.display_name} likes Post #{self.post.id}"
 
 
 class PostComment(models.Model):
@@ -269,7 +277,7 @@ class PostComment(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"Comment by {self.author.user.username} on Post #{self.post.id}"
+        return f"Comment by {self.author.display_name} on Post #{self.post.id}"
 
 class Follow(models.Model):
     """
@@ -313,4 +321,10 @@ class Notification(models.Model):
         ordering = ["-created_at"]
 
     def __str__(self):
-        return f"Notification for {self.recipient.user.username}: {self.title}"
+        return f"Notification for {self.recipient.display_name}: {self.title}"
+
+class Skill(models.Model):
+    name = models.CharField(max_length=60, unique=True)
+
+    def __str__(self):
+        return self.name

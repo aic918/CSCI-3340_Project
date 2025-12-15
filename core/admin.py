@@ -1,5 +1,7 @@
 from django.contrib import admin
-from .models import Profile, Session, Message, Review
+from .models import Profile, Session, Message, Review, Skill
+
+admin.site.register(Skill)
 
 
 @admin.register(Profile)

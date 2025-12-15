@@ -2,13 +2,13 @@
 
 {% block content %}
 <div class="container mt-4">
-    <h1>{{ mentor.user.username }}</h1>
+    <h1>{{ mentor.display_name }}</h1>
 
     {% if mentor.photo %}
         <img src="{{ mentor.photo.url }}"
              class="img-thumbnail mb-3"
              style="max-width: 200px;"
-             alt="{{ mentor.user.username }}'s photo">
+             alt="{{ mentor.display_name }}'s photo">
     {% endif %}
 
     {# Average rating #}

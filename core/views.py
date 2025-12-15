@@ -13,6 +13,11 @@ from django.db.models import Q, Avg
 from .forms import SessionRequestForm, ProfileForm, ReviewForm, AvailabilityForm, MessageForm, RescheduleForm, CommentForm
 from django import forms
 from django.views.decorators.http import require_POST
+from django.http import JsonResponse
+from datetime import timezone as dt_timezone
+from django.utils import timezone
+from .models import Skill
+
 
 @login_required
 @require_POST
@@ -62,7 +67,9 @@ def mentor_list(request):
             Q(user__username__icontains=query) |
             Q(bio__icontains=query) |
             Q(skills__icontains=query) |
-            Q(public_id__iexact=query)
+            Q(public_id__iexact=query)|
+            Q(first_name__icontains=query) |
+            Q(last_name__icontains=query)
         )
 
     # NEW: annotate average rating for each mentor
@@ -135,15 +142,18 @@ def request_session(request, mentor_id):
             # Notifications: scheduled (mentor + mentee)
             when = fmt_dt(session.scheduled_at)
 
+            mentee_name = session.mentee.display_name()  
+            mentor_name = session.mentor.display_name() 
+
             notify(
                 recipient_profile=session.mentor,
                 title="Session scheduled",
-                message=f"{session.mentee.user.username} scheduled a meeting for {session.topic} on {when}.",
+                message=f"{mentee_name} scheduled a meeting for {session.topic} on {when}.",
             )
             notify(
                 recipient_profile=session.mentee,
                 title="Session scheduled",
-                message=f"You scheduled a meeting for {session.topic} with {session.mentor.user.username} on {when}.",
+                message=f"You scheduled a meeting for {session.topic} with {mentor_name} on {when}.",
             )
 
 
@@ -393,7 +403,7 @@ def update_session_status(request, session_id, new_status):
                 recipient_profile=session.mentee,
                 title="Session confirmed",
                 message=(
-                    f"{session.mentor.user.username} confirmed a meeting for "
+                    f"{session.mentor.display_name} confirmed a meeting for "
                     f"{session.topic} on {when}."
                 ),
             )
@@ -411,7 +421,7 @@ def update_session_status(request, session_id, new_status):
                 recipient_profile=session.mentee,
                 title="Session cancelled",
                 message=(
-                    f"{session.mentor.user.username} cancelled the meeting for "
+                    f"{session.mentor.display_name} cancelled the meeting for "
                     f"{session.topic} on {when}."
                 ),
             )
@@ -606,12 +616,15 @@ def cancel_session(request, session_id):
         session.status = "CANCELLED"
         session.save()
 
+        mentee_name = session.mentee.display_name()   
+        mentor_name = session.mentor.display_name()
+
         # Notifications: cancelled (mentor + mentee)
         notify(
             recipient_profile=session.mentor,
             title="Session cancelled",
             message=(
-                f"{session.mentee.user.username} cancelled the meeting for "
+                f"{mentee_name} cancelled the meeting for "
                 f"{session.topic} on {when}."
             ),
         )
@@ -620,7 +633,7 @@ def cancel_session(request, session_id):
             title="Session cancelled",
             message=(
                 f"You cancelled the meeting for {session.topic} on {when} "
-                f"with {session.mentor.user.username}."
+                f"with {mentor_name}."
             ),
         )
 
@@ -648,12 +661,13 @@ def reschedule_session(request, session_id):
             old_when = fmt_dt(old_time)
             new_when = fmt_dt(updated.scheduled_at)
 
+            mentor_name = session.mentor.display_name()
             # Notify mentee
             notify(
                 recipient_profile=session.mentee,
                 title="Session rescheduled",
                 message=(
-                    f"{session.mentor.user.username} rescheduled the meeting for "
+                    f"{mentor_name} rescheduled the meeting for "
                     f"{session.topic} from {old_when} to {new_when}."
                 ),
             )
@@ -1059,7 +1073,11 @@ def delete_post(request, post_id):
     return redirect("feed")
 
 def fmt_dt(dt):
-    return timezone.localtime(dt).strftime("%b %d, %Y %-I:%M %p").lstrip("0")
+    if not dt:
+        return ""
+    dt_local = timezone.localtime(dt) if timezone.is_aware(dt) else dt
+    return dt_local.strftime("%b %d, %Y %-I:%M %p").lstrip("0")
+
 
 @login_required
 @require_POST
@@ -1090,3 +1108,16 @@ def welcome(request):
     profile.save()
 
     return render(request, "core/welcome.html")
+
+@login_required
+def skill_autocomplete(request):
+    q = request.GET.get("q", "").strip()
+    if not q:
+        return JsonResponse([], safe=False)
+
+    skills = (
+        Skill.objects
+        .filter(name__icontains=q)
+        .order_by("name")[:10]
+    )
+    return JsonResponse([s.name for s in skills], safe=False)

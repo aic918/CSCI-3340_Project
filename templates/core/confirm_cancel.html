@@ -3,7 +3,7 @@
 {% block content %}
 <div class="container mt-4" style="max-width: 600px;">
     <h1>Cancel Session</h1>
-    <p>Are you sure you want to cancel this session with {{ session.mentor.user.username }}?</p>
+    <p>Are you sure you want to cancel this session with {{ session.mentor.display_name }}?</p>
     <p><strong>Topic:</strong> {{ session.topic }}</p>
     <p><strong>Scheduled at:</strong> {{ session.scheduled_at }}</p>
 

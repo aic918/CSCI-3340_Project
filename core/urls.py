@@ -62,6 +62,7 @@ urlpatterns = [
     path("inbox/", views.inbox, name="inbox"),
     path("notifications/<int:notif_id>/delete/", views.delete_notification, name="delete_notification"),
     path("notifications/clear/", views.clear_notifications, name="clear_notifications"),
+    path("skills/autocomplete/", views.skill_autocomplete, name="skill_autocomplete"),
 
 ]
     

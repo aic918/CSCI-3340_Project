@@ -42,7 +42,7 @@ class SessionRequestForm(forms.ModelForm):
 class ProfileForm(forms.ModelForm):
     class Meta:
         model = Profile
-        fields = ["bio", "skills", "hourly_rate", "photo"]  # ← include photo
+        fields = [ "first_name","last_name","bio", "skills", "hourly_rate", "photo"]  # ← include photo
         widgets = {
             "bio": forms.Textarea(
                 attrs={
@@ -54,6 +54,8 @@ class ProfileForm(forms.ModelForm):
             "skills": forms.TextInput(
                 attrs={
                     "class": "form-control",
+                    "id": "skills-input",             
+                    "autocomplete": "off",            
                     "placeholder": "Data Structures, Python, Machine Learning",
                 }
             ),

@@ -21,7 +21,8 @@
             </div>
 
             <!-- USERNAME -->
-            <h3 class="mb-0">{{ profile_obj.user.username }}</h3>
+            <h3 class="mb-0">{{ profile_obj.display_name }}</h3>
+            <p class="small text-muted mb-0">@{{ profile_obj.display_name }}</p>
 
             <!-- ROLE -->
             <p class="text-muted mb-1">
@@ -134,7 +135,7 @@
                             {% for f in followed_mentors %}
                                 <li class="d-flex justify-content-between align-items-center mb-2">
                                     <a href="{% url 'mentor_detail' f.mentor.id %}">
-                                        {{ f.mentor.user.username }}
+                                    {{ f.mentor.display_name }}
                                     </a>
 
                                     <form method="post" action="{% url 'toggle_follow' f.mentor.id %}">
