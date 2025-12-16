@@ -416,3 +416,20 @@ select {
 input[type="file"] {
   color: rgba(245, 240, 255, 0.9);
 }
+/* Mentor profile action buttons: align + equal sizing */
+.mentor-action-buttons {
+  align-items: center;
+}
+
+.mentor-action-buttons .btn {
+  min-width: 170px;
+  text-align: center;
+}
+.mentor-action-buttons form {
+  margin: 0;
+}
+.mentor-action-buttons form {
+  display: inline-flex;
+  align-items: center;
+  margin: 0;
+}

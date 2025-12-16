@@ -32,39 +32,43 @@
         <p><strong>Rate:</strong> ${{ mentor.hourly_rate }} / hour</p>
     {% endif %}
 
-    {# ACTION BUTTONS FOR MENTEES #}
-    {% if user.is_authenticated and user.profile.role == "MENTEE" %}
-        <div class="mt-3 d-flex gap-2 flex-wrap">
+   {# ACTION BUTTONS FOR MENTEES #}
+{% if user.is_authenticated and user.profile.role == "MENTEE" %}
+  <div class="mt-3 d-flex gap-3 flex-wrap mentor-action-buttons">
 
-            {# Request session #}
-            <a href="{% url 'request_session' mentor.id %}"
-               class="btn btn-success">
-                Request a Session
-            </a>
+    {# Request session #}
+    <a href="{% url 'request_session' mentor.id %}"
+       class="btn mentora-btn-primary btn-lg">
+      Request a Session
+    </a>
 
-            {# Message button -> DM thread with this mentor #}
-            <a href="{% url 'conversation' mentor.id %}"
-               class="btn btn-outline-secondary">
-                Message
-            </a>
+    {# Message button -> DM thread with this mentor #}
+    <a href="{% url 'conversation' mentor.id %}"
+       class="btn mentora-btn-ghost btn-lg">
+      Message
+    </a>
 
-            {# Follow / Unfollow mentor #}
-            <form method="post"
-                  action="{% url 'toggle_follow' mentor.id %}">
-                {% csrf_token %}
-                <input type="hidden" name="next" value="{{ request.path }}">
-                {% if is_following %}
-                    <button type="submit" class="btn btn-outline-secondary">
-                        Unfollow
-                    </button>
-                {% else %}
-                    <button type="submit" class="btn btn-outline-primary">
-                        Follow
-                    </button>
-                {% endif %}
-            </form>
-        </div>
-    {% endif %}
+    {# Follow / Unfollow mentor #}
+    <form method="post"
+      action="{% url 'toggle_follow' mentor.id %}"
+      class="d-inline-flex align-items-center m-0 p-0">
+  {% csrf_token %}
+  <input type="hidden" name="next" value="{{ request.path }}">
+  {% if is_following %}
+    <button type="submit" class="btn mentora-btn-ghost btn-lg">
+      Unfollow
+    </button>
+  {% else %}
+    <button type="submit" class="btn mentora-btn-ghost btn-lg">
+      Follow
+    </button>
+  {% endif %}
+</form>
+
+
+  </div>
+{% endif %}
+
 
     {# AVAILABILITY SECTION #}
     <h4 class="mt-4">Availability</h4>

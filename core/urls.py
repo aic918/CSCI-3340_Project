@@ -32,6 +32,9 @@ urlpatterns = [
     path("feed/", views.feed, name="feed"),
     path("posts/new/", views.create_post, name="create_post"),
     path("posts/<int:post_id>/edit/", views.edit_post, name="edit_post"),
+    path("posts/<int:post_id>/delete/", views.delete_post, name="delete_post"),
+    path("posts/<int:post_id>/like/", views.toggle_like, name="toggle_like"),
+    path("posts/<int:post_id>/comment/", views.add_comment, name="add_comment"),
 
     # Connections
     path(
