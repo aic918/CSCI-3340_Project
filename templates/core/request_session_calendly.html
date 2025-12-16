@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-4">
+
+  <div class="mb-3">
+    <a href="{% url 'mentor_detail' mentor.id %}" class="btn btn-outline-light">
+      ← Back to Mentor
+    </a>
+  </div>
+
+  <div class="card border-0 shadow-sm"
+       style="background: #120f26; color: #f5f0ff;">
+    <div class="card-body">
+      <h2 class="h4 mb-1">
+        Book with {{ mentor.user.get_full_name|default:mentor.user.username }}
+      </h2>
+      <p class="text-muted mb-3">
+        Choose a time that works for you. You’ll stay on Mentora while scheduling.
+      </p>
+
+      <div class="calendly-inline-widget"
+           data-url="{{ mentor.calendly_url }}"
+           style="min-width:320px;height:780px;">
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://assets.calendly.com/assets/external/widget.js" async></script>
+{% endblock %}
+

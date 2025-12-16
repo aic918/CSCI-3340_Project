@@ -23,6 +23,10 @@ from django import forms
 from django.views.decorators.http import require_POST
 from django.http import HttpResponse
 from django.shortcuts import render
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import get_object_or_404, redirect, render
+from core.models import Profile
 
 @login_required
 @require_POST
@@ -133,8 +137,7 @@ def mentor_detail(request, mentor_id):
         },
     )
 
-
-@login_required
+#Request a mentor view
 def request_session(request, mentor_id):
     mentor = get_object_or_404(Profile, id=mentor_id, role="MENTOR")
 
@@ -142,25 +145,11 @@ def request_session(request, mentor_id):
     if request.user.profile.role != "MENTEE":
         return redirect("mentor_detail", mentor_id=mentor.id)
 
-    if request.method == "POST":
-        form = SessionRequestForm(request.POST)
-        if form.is_valid():
-            session = form.save(commit=False)
-            session.mentor = mentor
-            session.mentee = request.user.profile
-            session.status = "PENDING"
-            session.save()
-            # Later we can redirect to "my sessions" page
-            return redirect("mentor_detail", mentor_id=mentor.id)
-    else:
-        form = SessionRequestForm()
+    if not mentor.calendly_url:
+        messages.warning(request, "This mentor hasn’t added a Calendly link yet.")
+        return redirect("mentor_detail", mentor_id=mentor.id)
 
-    context = {
-        "mentor": mentor,
-        "form": form,
-    }
-    return render(request, "core/request_session.html", context)
-
+    return render(request, "core/request_session_calendly.html", {"mentor": mentor})
 
 # Role selection view
 def select_role(request):
