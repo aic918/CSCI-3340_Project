@@ -17,6 +17,7 @@ from .forms import (
     RescheduleForm,
     CommentForm,
 )
+from django.contrib import messages
 
 from django import forms
 from django.views.decorators.http import require_POST
@@ -169,29 +170,37 @@ def select_role(request):
     return render(request, "core/select_role.html")
 
 
-# Role selection view that forces role choice
 def signup(request):
-    # Read role from query string (?role=MENTOR or ?role=MENTEE)
     role = request.GET.get("role")
-
-    # If role is missing or invalid, send them back to choose
     if role not in ["MENTOR", "MENTEE"]:
         return redirect("select_role")
 
     if request.method == "POST":
         form = UserCreationForm(request.POST)
-        if form.is_valid():
-            user = form.save()  # creates the User
-            profile = user.profile  # Profile is created automatically by the signal
-            profile.role = role     # set to MENTOR or MENTEE
-            profile.save()
 
-            login(request, user)    # log them in
-            return redirect("dashboard") # or 'mentor_list' / dashboard later
+        # grab names from the POST
+        first_name = request.POST.get("first_name", "").strip()
+        last_name  = request.POST.get("last_name", "").strip()
+
+        if form.is_valid():
+            # optional: enforce names required
+            if not first_name or not last_name:
+                messages.error(request, "Please enter your first and last name.")
+            else:
+                user = form.save()
+                profile = user.profile  # created by signal
+                profile.role = role
+                profile.first_name = first_name
+                profile.last_name = last_name
+                profile.save()
+
+                login(request, user)
+                return redirect("dashboard")
     else:
         form = UserCreationForm()
 
     return render(request, "core/signup.html", {"form": form, "role": role})
+
 
 @login_required
 def dashboard(request):

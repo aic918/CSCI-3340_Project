@@ -1,11 +1,64 @@
 {% extends "base.html" %}
 
 {% block content %}
-<h1>Login</h1>
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-lg-5 col-md-7">
 
-<form method="post">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit">Log in</button>
-</form>
+      <section class="card mentora-hero border-0 p-4 p-md-5">
+        <div class="text-center mb-4">
+          <h1 class="display-6 fw-bold gradient-text mb-1">Login</h1>
+          <p class="text-muted mb-0">Welcome back to Mentora</p>
+        </div>
+
+        <form method="post">
+          {% csrf_token %}
+
+          {% if form.non_field_errors %}
+            <div class="alert alert-danger">
+              {{ form.non_field_errors }}
+            </div>
+          {% endif %}
+
+          <!-- Username -->
+          <div class="mb-3">
+            <label class="form-label" for="{{ form.username.id_for_label }}">
+              Username
+            </label>
+            {{ form.username }}
+            {% if form.username.errors %}
+              <div class="text-danger small mt-1">
+                {{ form.username.errors }}
+              </div>
+            {% endif %}
+          </div>
+
+          <!-- Password -->
+          <div class="mb-3">
+            <label class="form-label" for="{{ form.password.id_for_label }}">
+              Password
+            </label>
+            {{ form.password }}
+            {% if form.password.errors %}
+              <div class="text-danger small mt-1">
+                {{ form.password.errors }}
+              </div>
+            {% endif %}
+          </div>
+
+          <button type="submit" class="btn mentora-btn-primary btn-lg w-100">
+            Log in
+          </button>
+        </form>
+
+        <div class="text-center mt-3">
+          <a href="{% url 'select_role' %}" class="mentora-link">
+            Don’t have an account? Sign up
+          </a>
+        </div>
+      </section>
+
+    </div>
+  </div>
+</div>
 {% endblock %}

@@ -361,4 +361,58 @@ a:hover {
   --bs-success-rgb: 123, 44, 255;
 }
 
+/* Mentora-style auth inputs */
+.mentora-hero input[type="text"],
+.mentora-hero input[type="password"] {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.18);
+  background: rgba(255,255,255,0.07);
+  color: #fff;
+}
 
+.mentora-hero input::placeholder {
+  color: rgba(255,255,255,0.6);
+}
+
+.mentora-hero input:focus {
+  outline: none;
+  border-color: #8b5cf6;
+  box-shadow: 0 0 0 0.25rem rgba(139, 92, 246, 0.35);
+}
+
+/* ============================================================= */
+/*      FIX LOW-CONTRAST FORM TEXT (Create Post + similar)        */
+/* ============================================================= */
+
+/* Make labels readable on dark/glass backgrounds */
+label,
+.form-label {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+/* Help text + small hints readable */
+small,
+.form-text {
+  color: rgba(228, 215, 255, 0.75) !important;
+}
+
+/* Placeholder text readable (textarea + inputs) */
+input::placeholder,
+textarea::placeholder {
+  color: rgba(255, 255, 255, 0.45) !important;
+  opacity: 1;
+}
+
+/* Ensure textarea text is readable too */
+textarea,
+input,
+select {
+  color: #f5f0ff;
+}
+
+/* File input text ("No file chosen") readable */
+input[type="file"] {
+  color: rgba(245, 240, 255, 0.9);
+}
